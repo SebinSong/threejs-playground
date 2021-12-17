@@ -30,7 +30,7 @@ module.exports = (envSettings) => {
   const { mode } = envSettings
   const isProd = mode === 'production'
   const isDev = mode === 'development'
-  
+
   const config = {
     entry: './src/index.js',
     output: {
@@ -119,7 +119,7 @@ module.exports = (envSettings) => {
                   options: {
                     sourceMap: isDev,
                     root: paths.appSrc,
-                  },
+                  }
                 },
                 {
                   loader: require.resolve('sass-loader'),
