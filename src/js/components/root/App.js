@@ -1,32 +1,29 @@
-import React from 'react'
+import React, {
+  useRef, useEffect
+} from 'react'
+import { initThree } from './three-chapters/overall/cube-and-sphere'
 
-import imgPath from '@images/image.jpg'
 import './App.scss'
 
 function App (props) {
-  const blockEls = []
+  // ref
+  const canvasRef = useRef(null)
 
-  for (let i=0; i<5; i++) {
-    blockEls.push(
-      <div className={`app_block is-${i + 1}`}
-        key={i}></div>
-    )
-  }
+  // effects
+  useEffect(() => {
+    initThree(canvasRef.current)
+
+    return () => {
+      // terminate threejs if any
+    }
+  }, []) // mounted hook
 
   return (
     <div className="app-container">
-      { blockEls }
-
-      <img src={imgPath} alt="example image" />
-
-      <span className="name">
-        React SPA bolierplate
-        <br />
-        Created by
-        <a target="_blank" href="https://github.com/SebinSong">Sebin Song</a>
-      </span>
+      <canvas id="three-canvas"
+        ref={canvasRef}></canvas>
     </div>
   )
 }
 
-export default App
+export default App 
