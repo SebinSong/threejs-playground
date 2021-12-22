@@ -7,8 +7,8 @@ function randomFromArray (arr) {
 
 function randomIntFromRange (from, to) {
   to = to % 1 === 0 ? to + 0.1 : to
-  const gap = (to - from)
-  return Math.floor(from + Math.random() * gap)
+  const range = (to - from)
+  return Math.floor(from + Math.random() * range)
 }
 
 export {
