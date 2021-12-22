@@ -1,7 +1,11 @@
 import {
-  Line, BufferGeometry,
-  LineBasicMaterial, LineDashedMaterial,
-  Vector3, Group
+  Line, 
+  
+  BufferGeometry, BoxGeometry,
+
+  LineBasicMaterial, LineDashedMaterial, MeshLambertMaterial,
+
+  Vector3, Group, Mesh
 } from 'three'
 
 class LineMesh extends Line {
@@ -42,32 +46,53 @@ class Axes extends Group {
     ]
 
     super()
-    dotsTo.forEach(coor => {
-      this.add(new LineMesh({ color, pTo: coor }))
+    dotsTo.forEach((coor, index) => {
+      this.add(new LineMesh({ color: color, pTo: coor }))
     })
   }
 }
 
 class PlaneXY extends Group {
-  constructor ({ color = '#000000', size = 50, gridGap = 1 } = {}) {
+  constructor ({ color = '#000000',  gridGap = 1, width = 50, height = 50 } = {}) {
     super()
 
-    for (let i=0; i<=50; i += gridGap) {
-      const xLine = new LineMesh({
-        pFrom: [i, 0, 0], pTo: [i, size, 0], color
-      })
-      const yLine = new LineMesh({
-        pFrom: [0, i, 0], pTo: [size, i, 0], color
-      })
+    for (let x=0; x<=width; x += gridGap) {
+      this.add(new LineMesh({
+        pFrom: [x, 0, 0], pTo: [x, height, 0], color
+      }))
+    }
 
-      this.add(xLine)
-      this.add(yLine)
+    for (let y=0; y<=height; y += gridGap) {
+      this.add(new LineMesh({
+        pFrom: [0, y, 0], pTo: [width, y, 0], color
+      }))
     }
   }
+}
+
+class Cube extends Mesh {
+  constructor ({ 
+    size = 1,
+    color = '#000000',
+    index = 0,
+    scene = null
+  }) {
+    const geometry = new BoxGeometry (size, size, size)
+    const material = new MeshLambertMaterial({ color })
+
+    super(geometry, material)
+    this.castShadow = true
+    this.name = `cube-${index}`
+    this.scene = scene
+    this.sideLength = size
+  }
+
+  remove () { this.scene.remove(this) }
 }
 
 export {
   LineMesh,
   Axes,
-  PlaneXY
+  PlaneXY,
+  Cube
 }

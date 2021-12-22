@@ -5,6 +5,13 @@ function randomFromArray (arr) {
     return null
 }
 
+function randomIntFromRange (from, to) {
+  to = to % 1 === 0 ? to + 0.1 : to
+  const gap = (to - from)
+  return Math.floor(from + Math.random() * gap)
+}
+
 export {
-  randomFromArray
+  randomFromArray,
+  randomIntFromRange
 }
