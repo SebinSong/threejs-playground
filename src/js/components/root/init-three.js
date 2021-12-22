@@ -85,7 +85,6 @@ function adjustCameraAspectRatio (canvasEl) {
   if (canvasW !== canvasEl.width || canvasH !== canvasEl.height)
     renderer.setSize(canvasW * pixelRatio, canvasH * pixelRatio, false)
 
-  console.log(`canvas.width: ${canvasEl.width}, clientWidth: ${canvasW}`)
   if (camera.aspect !== aspectRatio) {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()

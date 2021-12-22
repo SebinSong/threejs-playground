@@ -2,10 +2,10 @@ import {
   WebGLRenderer, AxesHelper,
   Scene, PerspectiveCamera,
   PlaneGeometry, Mesh,
-  MeshBasicMaterial,
   BoxGeometry, SphereGeometry,
   SpotLight, MeshLambertMaterial
 } from 'three'
+import * as dat from 'dat.gui'
 
 const colors = {
   plane: 0x365073,
@@ -15,6 +15,11 @@ const colors = {
 let renderer, scene, camera, axes, plane, cube, sphere, light
 let aniId = null
 const render = () => renderer.render(scene, camera)
+
+const guiSettings = {
+  instance: null,
+  controller: null
+}
 
 function initThree (canvasEl) {
   // create scene
@@ -28,6 +33,7 @@ function initThree (canvasEl) {
   renderer = new WebGLRenderer({ canvas: canvasEl })
   initRendererAndCamera()
   setUpEventListeners()
+  setupGUI()
 
   
   // axes
@@ -87,15 +93,18 @@ function initThree (canvasEl) {
   function animate () {
     aniId = requestAnimationFrame(animate)
 
+    const {
+      rotationSpeed, bouncingSpeed
+    } = guiSettings.controller
     stepX += 0.02
-    stepY += 0.08
+    stepY += bouncingSpeed
 
     // sphere position (14, 2, 0)
     sphere.position.x = 14 + Math.sin(stepX) * 3
     sphere.position.y = 2 + Math.abs(Math.cos(stepY) * 3)
 
-    cube.rotation.x += 0.015
-    cube.rotation.y += 0.015
+    cube.rotation.x += rotationSpeed
+    cube.rotation.y += rotationSpeed
 
     render()
   }
@@ -105,6 +114,23 @@ function initThree (canvasEl) {
 // common
 function degreeToRadian (deg) {
   return deg / 180 * Math.PI
+}
+
+function setupGUI () {
+  const settings = [
+    { key: 'rotationSpeed', init: 0.015, min: 0.005, max: 0.1 },
+    { key: 'bouncingSpeed', init: 0.08, min: 0.01, max: 0.3 }
+  ]
+
+  guiSettings.instance = new dat.GUI()
+  guiSettings.controller = settings.reduce((obj, { key, init }) => {
+    obj[key] = init
+    return obj
+  }, {})
+
+  for (const { key, min, max } of settings) {
+    guiSettings.instance.add(guiSettings.controller, key, min, max, 0.001)
+  }
 }
 
 function setUpEventListeners () {
