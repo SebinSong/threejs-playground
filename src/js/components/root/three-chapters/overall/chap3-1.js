@@ -1,23 +1,36 @@
 import { WebGLRenderer, Scene, Color,
   PerspectiveCamera, Mesh, PlaneGeometry,
-  MeshLambertMaterial, AmbientLight
+  MeshLambertMaterial, AmbientLight, PointLight, DirectionalLight,
+  HemisphereLight, SpotLight, Group,
+  Object3D, Vector3, CameraHelper
 } from 'three'
-import { Axes, PlaneXY, Cube } from './utils.js'
-import { randomFromArray, randomIntFromRange } from '@view-util'
+import { Axes, PlaneXY, Cube, Sphere } from './utils.js'
+import { randomFromArray, randomIntFromRange, degreeToRadian } from '@view-util'
 import * as dat from 'dat.gui'
-import { color } from 'dat.gui'
 
-let renderer, scene, camera, axes, plane
-let ambientLight
+let renderer, scene, camera, axes, plane, spotLightTarget
+let animationRequestId = null
+let ambientLight, pointLight, spotLight, directionalLight, hemisphereLight
 
 const render = () => renderer.render(scene, camera)
 const [planeWidth, planeHeight] = [60, 60]
+const sphereGroups = []
+const sphereAniSettings = {
+  tStart: null, delay: 150,
+  angleSpeed: degreeToRadian(3), amplitude: 7
+}
+const gui = {
+  controller: null, panel: null
+}
 
 const colors = {
-  objects: ['#F2059F', '#418FBF', '#F2E205', '#F24405'],
+  objects: ['#F2059F', '#F2E205', '#F24405', '#418FBF'],
   line: '#BFBAB0',
   plane: '#7D6B7D',
-  light: '#FFFFFF'
+  ambientLight: '#DDDDDD',
+  pointLight: '#FFFFFF',
+  spotLight: '#FFFFFF',
+  directionalLight: '#FFFFFF'
 }
 
 function initThree (canvasEl) {
@@ -40,7 +53,7 @@ function initThree (canvasEl) {
 
   plane = new Mesh (
     new PlaneGeometry(planeWidth, planeHeight, 1, 1),
-    new MeshLambertMaterial({ color: colors.plane, transparent: true, opacity: 0.4 })
+    new MeshLambertMaterial({ color: colors.plane, transparent: true, opacity: 0.285 })
   )
   plane.rotation.x = -0.5 * Math.PI
   plane.position.set(planeWidth/2, 0, planeHeight/2)
@@ -51,10 +64,122 @@ function initThree (canvasEl) {
   scene.add(customPlane)
 
   // lights
-  ambientLight = new AmbientLight(colors.light)
+  ambientLight = new AmbientLight(colors.ambientLight)
+  pointLight = new PointLight(colors.pointLight, 1, 200, 2)
+  spotLight = new SpotLight(colors.spotLight, 1, 0, 5)
+  hemisphereLight = new HemisphereLight('#FF0000', '#00FF00', 1)
+
+  spotLight.position.set(planeWidth/2, 60, planeHeight/2)
+  spotLight.target.position.set(planeWidth/2, 0.1, planeHeight/2)
+  spotLight.castShadow = true
+  // spotLight.shadowCameraVisible = true;
+  
+  pointLight.position.set(planeWidth/2, 12, planeHeight/2)
+  pointLight.castShadow = true;
+  pointLight.visible = false;
+
+  directionalLight = new DirectionalLight(colors.directionalLight, 1)
+  directionalLight.castShadow = true
+  directionalLight.position.set(-70, 90, 70)
+  directionalLight.target.position.set(30, 0.1, 30)
+
+  /* IMPORTANT: need to enlarge the shadow camera area to render the shadows properly */
+  directionalLight.shadow.camera.left = -100
+  directionalLight.shadow.camera.right = 100
+  directionalLight.shadow.camera.top = 100
+  directionalLight.shadow.camera.bottom = -100
+
+  // hemisphereLight.castShadow = true;
+
   scene.add(ambientLight)
 
+  // scene.add(pointLight)
+
+  scene.add(spotLight)
+  scene.add(spotLight.target) // IMPORTANT : To update the target of the spot-light
+
+  // scene.add(directionalLight)
+  // scene.add(directionalLight.target) // IMPORTANT : To update the target of the directional light
+
+  scene.add(hemisphereLight)
+
+  // camera helper
+  // scene.add(new CameraHelper(spotLight.shadow.camera))
+
+  // add objects
+  const [sphereRadius, objectGap] = [2, 2]
+  const spherePositionArr = createGroups(4, 2)
+
+  spherePositionArr.forEach((positions, groupIndex) => {
+    
+    const group = new Group()
+    const colorArr = colors.objects
+    const groupColor = colorArr[groupIndex % colorArr.length]
+    const offset = sphereRadius*2 + objectGap
+
+    positions.forEach(([x, y, z]) => {
+      const sphere = new Sphere({ 
+        radius: sphereRadius, color: groupColor,
+        scene: scene
+      })
+      sphere.position.set(x * offset, y, z * offset)
+      sphere.castShadow = true
+
+      group.add(sphere)
+      group.position.x = planeWidth/2
+      group.position.z = planeHeight/2 
+      group.theta = 0
+    })
+
+    sphereGroups.push(group)
+    scene.add(group)
+  })
+
+  setupGUI()
   render()
+  animate()
+}
+
+function animate () {
+  animationRequestId = requestAnimationFrame(animate)
+
+  const { delay, angleSpeed, amplitude } = sphereAniSettings
+  const tNow = Date.now()
+  if (!sphereAniSettings.tStart)
+    sphereAniSettings.tStart = tNow;
+  
+  const tGap = tNow - sphereAniSettings.tStart;
+  sphereGroups.forEach((group, index) => {
+    const delayToApply = delay * index
+
+    if (tGap <= delayToApply)
+      return
+
+    group.theta += angleSpeed
+
+    const yChange = amplitude * Math.abs(Math.sin(group.theta))
+    group.position.y = yChange
+  })
+
+  render()
+}
+
+function setupGUI () {
+  const panel = new dat.GUI()
+  const controller = {
+    ambientColor: colors.ambientLight,
+    pointLightIntensity: 1
+  }
+
+  panel.addColor(controller, 'ambientColor').onChange(val => {
+    ambientLight.color.set(val)
+  })
+  panel.add(controller, 'pointLightIntensity', 0.1, 4, 0.05).onChange(val => {
+    pointLight.intensity = val
+  })
+
+  gui.panel = panel
+  gui.controller = controller
 }
 
 function initRendererAndCamera () {
@@ -71,7 +196,7 @@ function initRendererAndCamera () {
 
   camera.aspect = aspectRatio
   camera.updateProjectionMatrix()
-  camera.position.set(80, 80, 80)
+  camera.position.set(70, 90, 70)
   camera.lookAt(planeWidth/2, 0, planeHeight/2)
 }
 
@@ -83,6 +208,35 @@ function onScreenResize () {
   initRendererAndCamera()
   render()
 }
+
+// helpers
+function createGroups (line = 0, y = 0) {
+  const groupArr = [ [[0, y, 0]] ]
+  const range = (a, b) => {
+    const arr = []
+    
+    while (a <= b) { arr.push(a++) }
+    return arr
+  }
+  
+  if (line < 1)
+    return groupArr
+  
+  for (let i=1; i<=line; i++) {
+    const rangeArr = range(i*-1, i)
+    const arrToAdd = [
+      ...rangeArr.map(num => [-i, y, num]),
+      ...rangeArr.map(num => [i, y, num]),
+      ...rangeArr.map(num => [num, y, i]).filter(dot => Math.abs(dot[0]) < i),
+      ...rangeArr.map(num => [num, y, -i]).filter(dot => Math.abs(dot[0]) < i)
+    ]
+    groupArr.push(arrToAdd)
+  }
+  
+  return groupArr
+}
+
+
 export {
   initThree
 }

@@ -1,7 +1,7 @@
 import {
   Line, 
   
-  BufferGeometry, BoxGeometry,
+  BufferGeometry, BoxGeometry, SphereGeometry,
 
   LineBasicMaterial, LineDashedMaterial, MeshLambertMaterial,
 
@@ -90,9 +90,25 @@ class Cube extends Mesh {
   remove () { this.scene.remove(this) }
 }
 
+class Sphere extends Mesh {
+  constructor ({
+    radius = 1, color = '#000000',
+    scene = null
+  }) {
+    const geometry =  new SphereGeometry(radius, 32, 16)
+    const material = new MeshLambertMaterial({ color })
+
+    super(geometry, material)
+    this.scene = scene
+  }
+
+  remove () { this.scene.remove(this) }
+}
+
 export {
   LineMesh,
   Axes,
   PlaneXY,
-  Cube
+  Cube,
+  Sphere
 }

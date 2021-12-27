@@ -92,7 +92,7 @@ function animate () {
   })
 
   if (gui.controller.currentCamera === 'perspective') {
-    const { radius, currentAngle, angleSpeed } = cameraAniSettings
+     const { radius, currentAngle, angleSpeed } = cameraAniSettings
 
     const relPoint = [planeWidth/2, 0, planeHeight/2]
     const increment = [radius * Math.cos(currentAngle), 0, radius * Math.sin(currentAngle)]
