@@ -2,6 +2,7 @@ import {
   Line, BufferGeometry, BoxGeometry,
   LineBasicMaterial, LineDashedMaterial,
   MeshLambertMaterial, MeshBasicMaterial,
+  SphereGeometry, MeshLambertMaterial,
   Vector3, Group, Mesh
 } from 'three'
 
@@ -100,9 +101,25 @@ class Cube extends Group {
   remove () { this.scene.remove(this) }
 }
 
+class Sphere extends Mesh {
+  constructor ({
+    radius = 1, color = '#000000',
+    scene = null
+  }) {
+    const geometry =  new SphereGeometry(radius, 32, 16)
+    const material = new MeshLambertMaterial({ color })
+
+    super(geometry, material)
+    this.scene = scene
+  }
+
+  remove () { this.scene.remove(this) }
+}
+
 export {
   LineMesh,
   Axes,
   PlaneXY,
-  Cube
+  Cube,
+  Sphere
 }

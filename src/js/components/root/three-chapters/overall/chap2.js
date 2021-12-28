@@ -1,6 +1,6 @@
 import {
-  WebGLRenderer, Scene, PerspectiveCamera, Mesh,
-  PlaneGeometry, MeshLambertMaterial, AmbientLight, SpotLight,
+  WebGLRenderer, Scene, PerspectiveCamera, OrthographicCamera,
+  Mesh, PlaneGeometry, MeshLambertMaterial, AmbientLight, SpotLight,
   FogExp2
 } from 'three'
 import { Axes, PlaneXY, Cube } from './utils.js'
@@ -13,6 +13,7 @@ let animationRequestId = null
 
 const MAX_CUBE_NUMBER = 50
 const [planeWidth, planeHeight] = [60, 60]
+const [fov, nearPlane, farPlane] = [45, 0.1, 1000] // perspective camera settings
 const cubes = []
 
 const render = () => renderer.render(scene, camera)
@@ -24,13 +25,13 @@ const colors = {
 }
 
 const gui = { controller: null, panel: null }
+const cameraAniSettings = { angleSpeed: degreeToRadian(2), currentAngle: 0, radius: 4 }
 
 function initThree (canvasEl) {
   renderer = new WebGLRenderer({ canvas: canvasEl })
   scene = new Scene()
 
   // camera
-  const [fov, nearPlane, farPlane] = [45, 0.1, 1000]
   camera = new PerspectiveCamera(fov, 1, nearPlane, farPlane)
 
   initRendererAndCamera()
@@ -90,6 +91,20 @@ function animate () {
     cube.rotation.y += rotationSpeed
   })
 
+  if (gui.controller.currentCamera === 'perspective') {
+     const { radius, currentAngle, angleSpeed } = cameraAniSettings
+
+    const relPoint = [planeWidth/2, 0, planeHeight/2]
+    const increment = [radius * Math.cos(currentAngle), 0, radius * Math.sin(currentAngle)]
+    camera.lookAt(
+      relPoint[0] + increment[0],
+      relPoint[1] + increment[1],
+      relPoint[2] + increment[2]
+    )
+
+    cameraAniSettings.currentAngle += angleSpeed
+  }
+
   render()
 }
 
@@ -135,11 +150,36 @@ function setupGUI () {
     const cubes = scene.children.filter(child => child instanceof Cube)
     console.log('all cubes that are currently in the scene: ', cubes)
   }
+
+  const switchCamera = () => {
+
+    if (gui.controller.currentCamera === 'perspective') {
+      // switch to orthographic type
+      camera = new OrthographicCamera(-60, 60, 60, -60, 0.1, 1000)
+      camera.position.set(50, 50, 50)
+      camera.lookAt(planeWidth/2, 0, planeHeight/2)
+
+      gui.controller.currentCamera = 'orthographic'
+    } else {
+      // switch to the perspective type
+      const { width, height } = renderer.domElement
+      const aspectRatio = width / height
+
+      camera = new PerspectiveCamera(fov, aspectRatio, nearPlane, farPlane)
+      camera.position.set(80, 80, 80)
+      camera.lookAt(planeWidth/2, 0, planeHeight/2)
+
+      gui.controller.currentCamera = 'perspective'
+    }
+
+  }
   
   gui.controller = {
     rotationSpeed: rotationSettings.init,
     numOfCubes: cubes.length,
-    addCube, removeCube, outputCubes
+    addCube, removeCube, outputCubes,
+    switchCamera,
+    currentCamera: 'perspective'
   }
 
   const { min, max, increment } = rotationSettings
@@ -148,6 +188,8 @@ function setupGUI () {
   gui.panel.add(gui.controller, 'removeCube')
   gui.panel.add(gui.controller, 'outputCubes')
   gui.panel.add(gui.controller, 'numOfCubes').listen()
+  gui.panel.add(gui.controller, 'switchCamera')
+  gui.panel.add(gui.controller, 'currentCamera').listen()
 }
 
 function initRendererAndCamera () {
@@ -169,7 +211,7 @@ function initRendererAndCamera () {
   camera.aspect = aspectRatio
   camera.updateProjectionMatrix()
 
-  // camera position
+  // perspective camera position
   camera.position.set(80, 80, 80)
   camera.lookAt(planeWidth/2,0, planeHeight/2)
   // camera.rotation.z = Math.PI * 0.825
