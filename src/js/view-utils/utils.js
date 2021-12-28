@@ -12,7 +12,10 @@ function randomIntFromRange (from, to) {
   return Math.floor(from + Math.random() * range)
 }
 
+function degreeToRadian (deg) { return deg / 180 * Math.PI }
+
 export {
   randomFromArray,
-  randomIntFromRange
+  randomIntFromRange,
+  degreeToRadian
 }

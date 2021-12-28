@@ -72,7 +72,7 @@ function initThree (canvasEl) {
 
   // overrideMaterial
   // scene.overrideMaterial = new MeshLambertMaterial({ color: colors.cubes[0] })
-  console.log('child lookup by name: ', scene.getObjectByName('ambient-light'))
+  // console.log('child lookup by name: ', scene.getObjectByName('ambient-light'))
 
   render()
   animate()
