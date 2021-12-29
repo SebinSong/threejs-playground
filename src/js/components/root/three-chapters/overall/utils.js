@@ -2,8 +2,8 @@ import {
   Line, BufferGeometry, BoxGeometry,
   LineBasicMaterial, LineDashedMaterial,
   MeshLambertMaterial, MeshBasicMaterial,
-  SphereGeometry, MeshLambertMaterial,
-  Vector3, Group, Mesh
+  MeshDepthMaterial, MultiplyBlending,
+  SphereGeometry, Vector3, Group, Mesh
 } from 'three'
 
 class LineMesh extends Line {
@@ -91,7 +91,6 @@ class Cube extends Group {
     this.add(solidMesh)
     this.add(wiredMesh)
 
-    console.log('cube children: ', this.children)
     this.children[0].castShadow = true
     this.name = `cube-${index}`
     this.scene = scene
@@ -116,10 +115,45 @@ class Sphere extends Mesh {
   remove () { this.scene.remove(this) }
 }
 
+class CombineMaterial extends Group {
+  constructor (geometry, materials) {
+    super()
+
+    for (const material of materials) {
+      const mesh = new Mesh (geometry, material)
+
+      this.add(mesh)
+    }
+  }
+}
+
+class DepthSphere extends CombineMaterial {
+  constructor ({
+    radius = 1, color = '#000000',
+    scene = null
+  }) {
+    const geometry =  new SphereGeometry(radius, 32, 16)
+    const materials = [
+      new MeshLambertMaterial({ 
+        color, transparent: true,
+        blending: MultiplyBlending
+      }),
+      new MeshDepthMaterial()
+    ]
+
+    super(geometry, materials)
+    this.scene = scene
+  }
+
+  remove () { this.scene.remove(this) }
+}
+
 export {
   LineMesh,
   Axes,
   PlaneXY,
   Cube,
-  Sphere
+  Sphere,
+  CombineMaterial,
+  DepthSphere
 }
