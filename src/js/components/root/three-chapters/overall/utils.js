@@ -3,7 +3,7 @@ import {
   
   BufferGeometry, BoxGeometry, SphereGeometry,
 
-  LineBasicMaterial, LineDashedMaterial, MeshLambertMaterial,
+  LineBasicMaterial, LineDashedMaterial, MeshLambertMaterial, MeshPhongMaterial,
 
   Vector3, Group, Mesh
 } from 'three'
@@ -24,7 +24,7 @@ class LineMesh extends Line {
       color, linewidth: width
     },
     dashed && {
-      dashSize: 3, gapSize: 2
+      dashSize: 2, gapSize: 0.6
     })
     const material = new MaterialConstructor(materialObj)
     const geometry = new BufferGeometry().setFromPoints([
@@ -33,13 +33,17 @@ class LineMesh extends Line {
     ])
 
     super(geometry, material)
+    this.computeLineDistances()
+
     this.material = material
     this.geometry = geometry
   }
 }
 
 class Axes extends Group {
-  constructor ({ color = '#000000', size = 50 } = {}) {
+  constructor ({ color = '#000000', 
+    size = 50, dashed = false,
+    width = 1 } = {}) {
     
     const dotsTo = [
       [size, 0, 0], [0, size, 0], [0, 0, size]
@@ -47,24 +51,29 @@ class Axes extends Group {
 
     super()
     dotsTo.forEach((coor, index) => {
-      this.add(new LineMesh({ color: color, pTo: coor }))
+      this.add(
+        new LineMesh({ color: color, pTo: coor, 
+          dashed, width })
+      )
     })
   }
 }
 
 class PlaneXY extends Group {
-  constructor ({ color = '#000000',  gridGap = 1, width = 50, height = 50 } = {}) {
+  constructor ({ color = '#000000',  
+    gridGap = 1, width = 50, height = 50, 
+    dashed = false } = {}) {
     super()
 
     for (let x=0; x<=width; x += gridGap) {
       this.add(new LineMesh({
-        pFrom: [x, 0, 0], pTo: [x, height, 0], color
+        pFrom: [x, 0, 0], pTo: [x, height, 0], color, dashed
       }))
     }
 
     for (let y=0; y<=height; y += gridGap) {
       this.add(new LineMesh({
-        pFrom: [0, y, 0], pTo: [width, y, 0], color
+        pFrom: [0, y, 0], pTo: [width, y, 0], color, dashed
       }))
     }
   }

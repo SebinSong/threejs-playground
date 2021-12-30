@@ -1,6 +1,7 @@
-import { WebGLRenderer, Scene, Color,
+import { WebGLRenderer, CanvasRenderer, Scene, Color,
   PerspectiveCamera, Mesh, PlaneGeometry,
-  MeshLambertMaterial, AmbientLight, PointLight, DirectionalLight,
+  MeshLambertMaterial,
+  AmbientLight, PointLight, DirectionalLight, RectAreaLight,
   HemisphereLight, SpotLight, Group,
   Object3D, Vector3, CameraHelper
 } from 'three'
@@ -10,7 +11,7 @@ import * as dat from 'dat.gui'
 
 let renderer, scene, camera, axes, plane, spotLightTarget
 let animationRequestId = null
-let ambientLight, pointLight, spotLight, directionalLight, hemisphereLight
+let ambientLight, pointLight, spotLight, directionalLight, hemisphereLight, rectLight
 
 const render = () => renderer.render(scene, camera)
 const [planeWidth, planeHeight] = [60, 60]
@@ -45,9 +46,11 @@ function initThree (canvasEl) {
   setupEventListeners()
 
   // axes & plane
-  axes = new Axes({ color: colors.line, size: 100 })
+  axes = new Axes({ color: colors.line, size: 100, dashed: true, width: 3 })
 
-  const customPlane = new PlaneXY({ color: colors.line, width: planeWidth, height: planeHeight })
+  const customPlane = new PlaneXY({ 
+    color: colors.line, dashed: true,
+    width: planeWidth, height: planeHeight })
   customPlane.rotation.x = -0.5 * Math.PI
   customPlane.position.z = planeHeight
 
@@ -68,17 +71,17 @@ function initThree (canvasEl) {
   pointLight = new PointLight(colors.pointLight, 1, 200, 2)
   spotLight = new SpotLight(colors.spotLight, 1, 0, 5)
   hemisphereLight = new HemisphereLight('#FF0000', '#00FF00', 1)
+  directionalLight = new DirectionalLight(colors.directionalLight, 1)
+  rectLight = new RectAreaLight('#FF0000', 1, 20, 40)
 
   spotLight.position.set(planeWidth/2, 60, planeHeight/2)
   spotLight.target.position.set(planeWidth/2, 0.1, planeHeight/2)
   spotLight.castShadow = true
-  // spotLight.shadowCameraVisible = true;
   
   pointLight.position.set(planeWidth/2, 12, planeHeight/2)
   pointLight.castShadow = true;
   pointLight.visible = false;
 
-  directionalLight = new DirectionalLight(colors.directionalLight, 1)
   directionalLight.castShadow = true
   directionalLight.position.set(-70, 90, 70)
   directionalLight.target.position.set(30, 0.1, 30)
@@ -89,7 +92,8 @@ function initThree (canvasEl) {
   directionalLight.shadow.camera.top = 100
   directionalLight.shadow.camera.bottom = -100
 
-  // hemisphereLight.castShadow = true;
+  rectLight.position.set(-5, 5, 5)
+  rectLight.lookAt(0,0,0)
 
   scene.add(ambientLight)
 
@@ -101,7 +105,9 @@ function initThree (canvasEl) {
   // scene.add(directionalLight)
   // scene.add(directionalLight.target) // IMPORTANT : To update the target of the directional light
 
-  scene.add(hemisphereLight)
+  // scene.add(hemisphereLight)
+
+  scene.add(rectLight)
 
   // camera helper
   // scene.add(new CameraHelper(spotLight.shadow.camera))
@@ -196,8 +202,11 @@ function initRendererAndCamera () {
 
   camera.aspect = aspectRatio
   camera.updateProjectionMatrix()
-  camera.position.set(70, 90, 70)
-  camera.lookAt(planeWidth/2, 0, planeHeight/2)
+
+  camera.position.set(90, 40, 90)
+  camera.lookAt(0,0,0)
+  // camera.position.set(70, 90, 70)
+  // camera.lookAt(planeWidth/2, 0, planeHeight/2)
 }
 
 function setupEventListeners () {
