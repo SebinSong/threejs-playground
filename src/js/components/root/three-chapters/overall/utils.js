@@ -1,11 +1,9 @@
 import {
-  Line, 
-  
-  BufferGeometry, BoxGeometry, SphereGeometry,
-
-  LineBasicMaterial, LineDashedMaterial, MeshLambertMaterial, MeshPhongMaterial,
-
-  Vector3, Group, Mesh
+  Line, BufferGeometry, BoxGeometry,
+  LineBasicMaterial, LineDashedMaterial,
+  MeshLambertMaterial, MeshBasicMaterial,
+  MeshDepthMaterial, MultiplyBlending,
+  SphereGeometry, Vector3, Group, Mesh
 } from 'three'
 
 class LineMesh extends Line {
@@ -76,21 +74,33 @@ class PlaneXY extends Group {
         pFrom: [0, y, 0], pTo: [width, y, 0], color, dashed
       }))
     }
+
+    this.dimensions = { width, height }
   }
 }
 
-class Cube extends Mesh {
+class Cube extends Group {
   constructor ({ 
     size = 1,
     color = '#000000',
     index = 0,
-    scene = null
+    scene = null,
+    wireColor = '#000000'
   }) {
-    const geometry = new BoxGeometry (size, size, size)
-    const material = new MeshLambertMaterial({ color })
+    super()
 
-    super(geometry, material)
-    this.castShadow = true
+    const geometry = new BoxGeometry (size, size, size)
+    const [ solidMesh, wiredMesh ] = [
+      new Mesh(geometry, new MeshLambertMaterial({ color })),
+      new Mesh(geometry, new MeshBasicMaterial({ color: wireColor, wireframe: true })),
+    ]
+
+    solidMesh.name = 'solid-cube'
+    wiredMesh.name = 'wired-cube'
+    this.add(solidMesh)
+    this.add(wiredMesh)
+
+    this.children[0].castShadow = true
     this.name = `cube-${index}`
     this.scene = scene
     this.sideLength = size
@@ -114,10 +124,45 @@ class Sphere extends Mesh {
   remove () { this.scene.remove(this) }
 }
 
+class CombineMaterial extends Group {
+  constructor (geometry, materials) {
+    super()
+
+    for (const material of materials) {
+      const mesh = new Mesh (geometry, material)
+
+      this.add(mesh)
+    }
+  }
+}
+
+class DepthSphere extends CombineMaterial {
+  constructor ({
+    radius = 1, color = '#000000',
+    scene = null
+  }) {
+    const geometry =  new SphereGeometry(radius, 32, 16)
+    const materials = [
+      new MeshLambertMaterial({ 
+        color, transparent: true,
+        blending: MultiplyBlending
+      }),
+      new MeshDepthMaterial()
+    ]
+
+    super(geometry, materials)
+    this.scene = scene
+  }
+
+  remove () { this.scene.remove(this) }
+}
+
 export {
   LineMesh,
   Axes,
   PlaneXY,
   Cube,
-  Sphere
+  Sphere,
+  CombineMaterial,
+  DepthSphere
 }
