@@ -1,21 +1,21 @@
-import {
+import * as THREE from 'three'
+const {
   WebGLRenderer, Scene, PerspectiveCamera,
-  Mesh, PlaneGeometry, BufferGeometry,
-  MeshLambertMaterial, MeshStandardMaterial, MeshPhongMaterial, MeshBasicMaterial,
-  AmbientLight, DirectionalLight, Object3D, Vector3,
-  BufferAttribute, SphereGeometry, Color, VertexColors
-} from 'three'
-import { Axes, PlaneXY } from './utils.js'
+  Mesh, PlaneGeometry, MeshLambertMaterial,
+  AmbientLight, DirectionalLight, Object3D,
+  DoubleSide
+} = THREE
+import { Axes, PlaneXY, CombineMaterial } from './utils.js'
 import { degreeToRadian } from '@view-util'
 import * as dat from 'dat.gui'
-let renderer, scene, camera, axes, plane, cone
+let renderer, scene, camera, axes, plane, object
 let animationRequestId = null
 let ambientLight, directionalLight
+let angleSpeed = 0, rotateSpeed = 0
 
 const render = () => renderer.render(scene, camera)
 const [planeWidth, planeHeight] = [60, 60]
 const gui = { controller: null, panel: null }
-
 const colors = {
   objects: ['#F2059F', '#F2E205', '#F24405', '#418FBF'],
   line: '#BFBAB0',
@@ -29,7 +29,7 @@ function initThree (canvasEl) {
   scene = new Scene()
 
   // camera
-  const [fov, nearPlane, farPlane] = [45, 0.1, 1000]
+  const [fov, nearPlane, farPlane] = [45, 40, 500]
   camera = new PerspectiveCamera(fov, 1, nearPlane, farPlane)
 
   initRendererAndCamera()
@@ -39,7 +39,8 @@ function initThree (canvasEl) {
   axes = new Axes({ color: colors.line, size: 100 })
 
   const customPlane = new PlaneXY({ 
-    color: colors.line, width: planeWidth, height: planeHeight })
+    color: colors.line, width: planeWidth, height: planeHeight
+  })
   customPlane.rotation.x = -0.5 * Math.PI
   customPlane.position.z = planeHeight
 
@@ -78,45 +79,23 @@ function initThree (canvasEl) {
   scene.add(directionalLight)
   scene.add(directionalLight.target)
 
-  // add objects
-  const pC = new Vector3(planeWidth/2, 0.1, planeHeight/2) // plane center
-  const [sideLength, hornHeight] = [10, 10]
-  const s2 = sideLength/2
-
-  const geometry = new BufferGeometry()
-  const material = new MeshBasicMaterial({ color: '#FFFF00', side: 'double' })
-  const vertexInfos = {
-    p1: { coor: [pC.x - s2, pC.y, pC.z - s2], color: [51, 51, 0] },
-    p2: { coor: [pC.x - s2, pC.y, pC.z + s2], color: [102, 102, 0] },
-    p3: { coor: [pC.x + s2, pC.y, pC.z + s2], color: [153, 153, 0] },
-    p4: { coor: [pC.x + s2, pC.y, pC.z + s2], color: [204, 204, 0] },
-    h1: { coor: [pC.x, hornHeight, pC.z], color: [255, 255, 0] }
-  }
-  let verticesArr = [], colorsArr = []
-  const faceArr = [
-    'p1', 'p2', 'h1',
-    'p2', 'p3', 'h1',
-    'p3', 'p4', 'h1',
-    'p4', 'p1', 'h1'
-  ]
-  
-  faceArr.forEach(vertexKey => {
-    verticesArr = [ ...verticesArr, ...vertexInfos[vertexKey].coor ]
-    colorsArr = [ ...colorsArr, ...vertexInfos[vertexKey].color ]
-  })
-
-  verticesArr = new Float32Array(verticesArr)
-  colorsArr = new Uint8Array(colorsArr)
-
-  console.log('verticesArr: ', verticesArr)
-  geometry.setAttribute('position', new BufferAttribute(verticesArr, 3))
-  // geometry.setAttribute('color', new BufferAttribute(colorsArr, 3, true))
-
-  cone = new Mesh(geometry, material)
-
-  scene.add(cone)
   // camera helper
   // scene.add(new CameraHelper(directionalLight.shadow.camera))
+
+  const objectSide = 20
+  object = new CombineMaterial(
+    new THREE.CircleGeometry(10, 32),
+    [
+      new MeshLambertMaterial({ 
+        color: colors.objects[1], side: DoubleSide, transparent: true, opacity: 0.5,
+        blending: THREE.NormalBlending
+      }),
+      new MeshLambertMaterial({ color: '#6A6A6A', side: DoubleSide, wireframe: true })
+    ], true
+  )
+  object.position.set(planeWidth/2, objectSide/2, planeHeight/2)
+  object.castShadow = true
+  scene.add(object)
 
   render()
   animate()
@@ -124,6 +103,13 @@ function initThree (canvasEl) {
 
 function animate () {
   animationRequestId = requestAnimationFrame(animate)
+
+  angleSpeed += degreeToRadian(0.5)
+  rotateSpeed += degreeToRadian(3)
+  object.rotation.x = angleSpeed
+  object.rotation.z = angleSpeed
+
+  object.children[0].geometry = new THREE.CircleGeometry(10, 32, rotateSpeed, Math.PI/2)
 
   render()
 }
@@ -142,8 +128,8 @@ function initRendererAndCamera () {
 
   camera.aspect = aspectRatio
   camera.updateProjectionMatrix()
-  camera.position.set(-70, 70, 70)
-  camera.lookAt(planeWidth/2, 1, planeHeight/2)
+  camera.position.set(70, 80, 70)
+  camera.lookAt(planeWidth/2, 0.5, planeHeight/2)
 }
 
 function setupEventListeners () {
@@ -154,6 +140,8 @@ function onScreenResize () {
   initRendererAndCamera()
   render()
 }
+
+// helper funcs
 
 export {
   initThree
