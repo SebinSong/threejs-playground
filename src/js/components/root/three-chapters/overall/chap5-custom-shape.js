@@ -137,7 +137,7 @@ function setupEventListeners () {
 }
 
 function onScreenResize () {
-  initRendererAndCamera()
+  configureRendererAndCamera()
   renderScene()
 }
 
