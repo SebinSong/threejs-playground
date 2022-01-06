@@ -1,17 +1,20 @@
 import * as THREE from 'three'
-import { Axes, PlaneXY } from './utils.js'
+import { MeshBasicMaterial } from 'three'
+import { Axes, PlaneXY, CombineMaterial,
+  getGeometryBoundingBox } from './utils.js'
+import { degreeToRadian } from '@view-util'
 
 const { 
   WebGLRenderer, Scene, PerspectiveCamera,
-  Color, Vector3, Vector2, Object3D, 
+  Color, Vector2, Vector3, Object3D, 
   Mesh, PlaneGeometry, ShapeGeometry,
   MeshLambertMaterial, AmbientLight, SpotLight,
-  CameraHelper, Shape
+  CameraHelper, Shape, Line, LineBasicMaterial, BufferGeometry, Path
 } = THREE
 
 let renderer, scene, camera, ambientLight, spotLight, cameraHelper
 let animationRequestId
-let axes, customPlane, plane, object
+let axes, customPlane, plane, object, object2
 
 const renderScene = () => renderer.render(scene, camera)
 const [planeWidth, planeHeight] = [60, 60]
@@ -20,6 +23,8 @@ const cameraSettings = {
   fov: 45, near: 0.1, far: 1000,
   position: [70, 80, 70],
   lookAt: [planeWidth/2, 1, planeHeight/2]
+  // position: [0, 60, 200],
+  // lookAt: [0, 60, 0]
 }
 const colors = {
   objects: ['#F2059F', '#F2E205', '#F24405', '#418FBF'],
@@ -88,26 +93,94 @@ function initThree (canvasEl) {
   scene.add(ambientLight)
   scene.add(spotLight)
   scene.add(spotLight.target)
-  scene.add(cameraHelper)
 
+  // object
+  const objGeometry = new ShapeGeometry(drawShape('heart'))
+
+  object = new CombineMaterial(
+    objGeometry,
+    [
+      new MeshLambertMaterial({ 
+        color: colors.objects[2], transparent: true, opacity: 0.75,
+        blending: THREE.NormalBlending, side: THREE.DoubleSide
+      }),
+      new MeshLambertMaterial({ 
+        color: colors.line, wireframe: true, side: THREE.DoubleSide
+      })
+    ], true
+  )
+
+  const heartBBox = getGeometryBoundingBox(objGeometry)
+  const { center: heartCenter  } = heartBBox
+
+  object.rotation.x = -0.5 * Math.PI
+  object.scale.set(0.25, 0.25, 0.25)
+  object.position.set(planeWidth/2 - heartCenter.x * 0.25, 10, planeHeight/2 + heartCenter.y * 0.25)
+
+  scene.add(object)
+
+  // arc
+
+  object2 = new Mesh(
+    new ShapeGeometry(drawShape('arc')),
+    new MeshLambertMaterial({ 
+      color: colors.objects[3], transparent: true, opacity: 0.75,
+      blending: THREE.NormalBlending, side: THREE.DoubleSide
+    })
+  )
+  // object2.rotation.x = degreeToRadian(45)
+  // object2.position.set(4, 0.1, 4)
+  object2.castShadow = true
+
+  let arcPoints = object2.geometry.parameters.shapes.extractPoints(20)
+  arcPoints = arcPoints.shape.map(({ x, y }) => new Vector3(x, y, 0))
+  
+  const bufGeo = new BufferGeometry()
+  bufGeo.setFromPoints(arcPoints)
+  console.log('arcPoints: ', arcPoints)
+
+  const lineMaterial = new LineBasicMaterial({ color: '#000000' })
+  const lineMesh = new Line(bufGeo, lineMaterial)
+  lineMesh.computeLineDistances()
+
+  scene.add(object2)
+  scene.add(lineMesh)
 
   renderScene()
   animate()
 }
 
-function drawShape () {
+function drawShape (shapeName = '') {
   const shape = new Shape()
+  const hole = new Path()
+  hole.arc(7, 1, 2, 0, Math.PI*2, false)
 
-  shape.moveTo(0,0)
-  shape.lineTo(30, 30)
-  shape.splineThru([
-    new Vector2(40, 20), 
-    new Vector2(50, 40), 
-    new Vector2(60, 20)
-  ])
-  shape.quadraticCurveTo(50, 10 ,40, 0)
-  shape.lineTo(0,0)
-
+  switch (shapeName) {
+    case 'arc':
+      shape.moveTo(0, 0)
+      shape.arc(10, 0, 8, 0, Math.PI * 0.75, true)
+      shape.holes.push(hole)
+      break;
+    case 'heart':
+      shape.moveTo(25, 25)
+      shape.bezierCurveTo(25, 25, 20, 0, 0, 0)
+      shape.bezierCurveTo(-30, 0, -30, 35, -30, 35)
+      shape.bezierCurveTo(-30, 55, -10, 77, 25, 95)
+      shape.bezierCurveTo(60, 77, 80, 55, 80, 35)
+      shape.bezierCurveTo(80, 35, 80, 0, 50, 0)
+      shape.bezierCurveTo(25, 0, 25, 25, 25, 25)
+      break;
+    default: 
+      shape.moveTo(0,0)
+      shape.lineTo(8, 8)
+      shape.splineThru([
+        new Vector2(12, 6), 
+        new Vector2(15, 10), 
+        new Vector2(18, 7)
+      ])
+      shape.quadraticCurveTo(23, 5 ,27, 0)
+  }
+  // shape.lineTo(0,0)
   return shape
 }
 
@@ -137,7 +210,7 @@ function setupEventListeners () {
 }
 
 function onScreenResize () {
-  initRendererAndCamera()
+  configureRendererAndCamera()
   renderScene()
 }
 
