@@ -31,7 +31,7 @@ class LineMesh extends Line {
     ])
 
     super(geometry, material)
-    this.computeLineDistances()
+    this.computeLineDistances() // IMPORTANT for 'dashed' to work
 
     this.material = material
     this.geometry = geometry
@@ -134,6 +134,31 @@ class CombineMaterial extends Group {
       mesh.castShadow = shadow
       this.add(mesh)
     }
+
+    this.geometry = geometry
+    this.castShadow = shadow
+  }
+
+  // static methods
+  static clone (instance) {
+    const spreadVec3 = v => [v.x, v.y, v.z]
+    const { 
+      children, geometry, castShadow,
+      position, rotation, scale } = instance
+    const materialArr = children.map(mesh => mesh.material.clone())
+    const newInstance = new CombineMaterial(geometry.clone(), materialArr, castShadow)
+    
+    newInstance.position.set(...spreadVec3(position))
+    newInstance.scale.set(...spreadVec3(scale))
+    newInstance.rotation.set(rotation._x, rotation._y, rotation._z)
+
+    return newInstance
+  }
+
+  // instance methods
+  updateGeometry (newGeo) {
+    this.geometry = newGeo
+    this.children.forEach(mesh => { mesh.geometry = newGeo })
   }
 }
 
@@ -158,6 +183,32 @@ class DepthSphere extends CombineMaterial {
   remove () { this.scene.remove(this) }
 }
 
+// util functions
+function getGeometryBoundingBox (geometry) {
+  geometry.computeBoundingBox()
+
+  if (!geometry.boundingBox)
+    return null
+
+  const spreadVector = ({x, y, z}) => [x, y, z]
+  const { min, max } = geometry.boundingBox
+  const half = key => {
+    const halfLength = (max[key] - min[key]) / 2
+    return min[key] + halfLength
+  }
+
+  const center = new Vector3(half('x'), half('y'), half('z'))
+  const [ width, height, depth ] = [
+    Math.abs(max.x - min.x), Math.abs(max.y - min.y), Math.abs(max.z - min.z)
+  ]
+
+  return {
+    min: spreadVector(min),
+    max: spreadVector(max),
+    center, width, height, depth // width : x-axis, height: y-axis, depth: z-axis
+  }
+}
+
 export {
   LineMesh,
   Axes,
@@ -165,5 +216,6 @@ export {
   Cube,
   Sphere,
   CombineMaterial,
-  DepthSphere
+  DepthSphere,
+  getGeometryBoundingBox
 }

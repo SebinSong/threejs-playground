@@ -14,8 +14,11 @@ function randomIntFromRange (from, to) {
 
 function degreeToRadian (deg) { return deg / 180 * Math.PI }
 
+function randomSign () { return Math.random() <0.5 ? 1 : -1 }
+
 export {
   randomFromArray,
   randomIntFromRange,
-  degreeToRadian
+  degreeToRadian,
+  randomSign
 }
