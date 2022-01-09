@@ -1,7 +1,7 @@
 import React, {
   useRef, useEffect
 } from 'react'
-import { initThree } from './three-chapters/overall/chap6-extrude-tube'
+import { initThree } from './three-chapters/overall/chap6-extrude-1'
 
 import './App.scss'
 
