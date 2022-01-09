@@ -1,3 +1,5 @@
+import { ParametricGeometry } from 'three/examples/jsm/geometries/ParametricGeometry.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import {
   Line, BufferGeometry, BoxGeometry,
   LineBasicMaterial, LineDashedMaterial,
@@ -217,5 +219,7 @@ export {
   Sphere,
   CombineMaterial,
   DepthSphere,
-  getGeometryBoundingBox
+  getGeometryBoundingBox,
+  ParametricGeometry,
+  OrbitControls
 }

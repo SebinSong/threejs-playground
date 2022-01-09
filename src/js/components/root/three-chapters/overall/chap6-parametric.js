@@ -1,19 +1,20 @@
 import * as THREE from 'three'
-import { Axes, PlaneXY, CombineMaterial, getGeometryBoundingBox } from './utils.js'
-import { degreeToRadian, randomSign } from '@view-util'
+import { ParametricGeometry } from 'three/examples/jsm/geometries/ParametricGeometry.js'
+import { Axes, PlaneXY, CombineMaterial, 
+  getGeometryBoundingBox, OrbitControls } from './utils.js'
+import { degreeToRadian, randomBetween } from '@view-util'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
-  PlaneGeometry, ShapeGeometry, ExtrudeGeometry, BufferGeometry,
-  Mesh, MeshLambertMaterial, MeshBasicMaterial, LineBasicMaterial,
+  PlaneGeometry,
+  Mesh, MeshLambertMaterial, MeshBasicMaterial,
   AmbientLight, SpotLight,
-  SplineCurve, CatmullRomCurve3,
-  Vector2, Vector3, Color, Object3D, Path, Shape, Line
+  Vector3, Color, Object3D
 } = THREE
 
-let renderer, scene, camera
+let renderer, scene, camera, orbitControl
 let ambientLight, spotLight
-let axes, customPlane, plane, shape, extrude, curvePath
+let axes, customPlane, plane, parametricObj, parametricPlane
 let animationId = null
 
 const renderScene = () => renderer.render(scene, camera)
@@ -47,6 +48,11 @@ function initThree (canvasEl) {
     camera.position.copy(position)
     camera.lookAt(...lookAt)
   })()
+
+  // control
+  orbitControl = new OrbitControls(camera, canvasEl)
+  orbitControl.screenSpacePanning = true
+  orbitControl.update()
 
   configureRendererAndCamera()
   setupEventListeners()
@@ -89,56 +95,48 @@ function initThree (canvasEl) {
   scene.add(spotLight)
   scene.add(spotLight.target)
 
-  // objects
-
-  // draw a custom curve along which we create the extrusion
-  const curvePoints = []
-  const curvePointNum = 6, curvePointZUnit = 4
-  let curvePointsForDraw = null
-
-  for (let p=0; p<curvePointNum; p++) {
-    curvePoints.push(
-      new Vector3(
-        0,
-        10 + randomSign() * Math.round( 2 * Math.random() ),
-        curvePointZUnit * (curvePointNum * -0.5 + p)
-      )
-    )
-  }
-  curvePath = new CatmullRomCurve3(curvePoints)
-  curvePointsForDraw = curvePath.getPoints(50)
-
-  const curveGeo = new BufferGeometry().setFromPoints(curvePointsForDraw)
-  const curveLineMaterial = new LineBasicMaterial({ color: '#000000' })
-  const curvePathLine = new Line(curveGeo, curveLineMaterial)
-
-  shape = new CombineMaterial(
-    new ShapeGeometry(drawShape()),
-    [
-      new MeshLambertMaterial({
-        color: colors.objects[2], side: THREE.DoubleSide,
-      })
+  // objects - 1
+  const paraFunc = (u, v, target) => { target.set(4*u, 4*v, Math.pow(4*u, 1.5) + Math.pow(4*v, 1.5)) }
+  const paraGeo = new ParametricGeometry(paraFunc)
+  parametricObj = new CombineMaterial(
+    paraGeo, [
+      new MeshLambertMaterial({ color: colors.objects[3], transparent: true, opacity: 0.6,
+        side: THREE.DoubleSide }),
+      new MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.3,
+        side: THREE.DoubleSide, wireframe: true })
     ], true
   )
-
-  const extrudeOpts = {
-    curveSegments: 40,
-    steps: 10, depth: 12, bevelEnabled: false,
-    bevelThickness: 1, bevelSize: 1, bevelOffset: 0, bevelSegments: 1,
-    extrudePath: curvePath
-  }
-
-  extrude = new Mesh(
-    new ExtrudeGeometry(drawShape(), extrudeOpts),
-    new MeshLambertMaterial({ color: colors.objects[1], side: THREE.DoubleSide,
-      transparent: true, opacity: 0.65 })
-  )
-  extrude.position.set(planeWidth/2, 20, planeHeight/2)
-  extrude.castShadow = true
+  parametricObj.rotation.x = Math.PI * -0.5
+  parametricObj.position.set(planeWidth/2, 1, planeHeight/2)
   
-  scene.add(shape)
-  scene.add(extrude)
-  scene.add(curvePathLine)
+  const pCopy1 = CombineMaterial.clone(parametricObj)
+  pCopy1.rotation.z = Math.PI * 0.5
+
+  scene.add(parametricObj)
+  scene.add(pCopy1)
+
+  // object - 2
+  const paraPlaneFunc = (u, v, target) => {
+    const r = 30
+
+    target.set(
+      Math.sin(u) * r,
+      Math.sin(u * 4 * Math.PI) + Math.cos(v * 2 * Math.PI) * 2.8,
+      Math.sin(v / 2) * 2 * r
+    )
+  }
+  parametricPlane = new CombineMaterial(
+    new ParametricGeometry(paraPlaneFunc, 64, 64),
+    [
+      new MeshLambertMaterial({ color: colors.objects[2], transparent: true, opacity: 0.6,
+        side: THREE.DoubleSide }),
+      new MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.4,
+        side: THREE.DoubleSide, wireframe: true })
+    ], true
+  )
+  parametricPlane.position.set(20, 20, 20)
+
+  scene.add(parametricPlane)
 
   // render & animation
   renderScene()
@@ -147,49 +145,8 @@ function initThree (canvasEl) {
 
 function animate () {
   animationId = window.requestAnimationFrame(animate)
-
-  extrude.rotation.y += degreeToRadian(0.4)
   
   renderScene()
-}
-
-function drawShape () {
-  const shape = new Shape()
-
-  shape.moveTo(-12,0)
-  shape.absellipse(0, 0, 12, 8, 0, 2 * Math.PI, true, 0)
-  shape.closePath()
-
-  // draw holes
-  const hole1 = new Path()
-  hole1.moveTo(-2, 0)
-  hole1.lineTo(-2, 3)
-  hole1.arc(2, 0, 2, Math.PI, 0, true)
-  hole1.lineTo(2, -3)
-  hole1.absarc(0, -3, 2, 0, Math.PI, true)
-  hole1.lineTo(-2, 0)
-
-  const hole2 = new Path()
-  hole2.moveTo(4, 0)
-  hole2.lineTo(4, 2)
-  hole2.arc(1, 0, 1, Math.PI, 0, true)
-  hole2.lineTo(6, -2)
-  hole2.absarc(5, -2, 1, 0, Math.PI, true)
-  hole2.lineTo(4, 0)
-
-  const hole3 = new Path()
-  hole3.moveTo(-4, 0)
-  hole3.lineTo(-4, 2)
-  hole3.arc(-1, 0, 1, 0, Math.PI, false)
-  hole3.lineTo(-6, -2)
-  hole3.absarc(-5, -2, 1, Math.PI, 0, false)
-  hole3.lineTo(-4, 0)
-
-  shape.holes.push(hole1)
-  shape.holes.push(hole2)
-  shape.holes.push(hole3)
-
-  return shape
 }
 
 function setupEventListeners () {
@@ -209,13 +166,14 @@ function configureRendererAndCamera () {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
   }
+
+  orbitControl.update()
 }
 
 function onScreenResize () {
   configureRendererAndCamera()
   renderScene()
 }
-
 
 export {
   initThree
