@@ -1,5 +1,7 @@
 import { ParametricGeometry } from 'three/examples/jsm/geometries/ParametricGeometry.js'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import {
   Line, BufferGeometry, BoxGeometry,
   LineBasicMaterial, LineDashedMaterial,
@@ -211,6 +213,20 @@ function getGeometryBoundingBox (geometry) {
   }
 }
 
+async function loadFont (url) {
+  if (!url)
+    return Promise.resolve(null)
+
+  const loader = new FontLoader()
+  return new Promise((resolve, reject) => {
+    loader.load(url,
+      font => resolve(font), // onSuccess
+      null,
+      err => reject(err)
+    )
+  })
+}
+
 export {
   LineMesh,
   Axes,
@@ -221,5 +237,8 @@ export {
   DepthSphere,
   getGeometryBoundingBox,
   ParametricGeometry,
-  OrbitControls
+  OrbitControls,
+  FontLoader,
+  TextGeometry,
+  loadFont
 }

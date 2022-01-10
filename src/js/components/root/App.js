@@ -1,7 +1,7 @@
 import React, {
   useRef, useEffect
 } from 'react'
-import { initThree } from './three-chapters/overall/chap6-extrude-1'
+import { initThree } from './three-chapters/overall/chap7-particles-canvas'
 
 import './App.scss'
 
@@ -22,6 +22,7 @@ function App (props) {
     <div className="app-container">
       <canvas id="three-canvas"
         ref={canvasRef}></canvas>
+
     </div>
   )
 }

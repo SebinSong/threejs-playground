@@ -20,6 +20,7 @@ const paths = {
 
 // regExps
 const fontRegex = /\.(woff(2)?|ttf|eot)$/
+const typefaceRegex = /\.typeface\.json$/
 const imageRegex = [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/]
 const svgRegex = /\.svg$/
 const rawAssetRegex = [/\.txt$/]
@@ -49,6 +50,13 @@ module.exports = (envSettings) => {
               type: 'asset/resource',
               generator: {
                 filename: 'static/fonts/[hash][ext]'
+              }
+            },
+            {
+              test: typefaceRegex,
+              type: 'asset/resource',
+              generator: {
+                filename: 'static/fonts/[name].[ext]'
               }
             },
             {
@@ -160,6 +168,7 @@ module.exports = (envSettings) => {
     resolve: {
       alias: {
         '@scss': paths.appSass,
+        '@assets': paths.appAssets,
         '@images': path.join(paths.appAssets, 'images'),
         '@components': path.join(paths.appSrc, 'js/components'),
         '@view-util': path.join(paths.appSrc, 'js/view-utils/utils.js'),
