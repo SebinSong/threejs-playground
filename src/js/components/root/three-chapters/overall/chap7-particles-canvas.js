@@ -21,7 +21,6 @@ let ambientLight, directionalLight
 let axes, customPlane, plane
 let points, canvasTexture
 
-let spriteRotateAngle = 0
 let animationId = null
 
 const renderScene = () => renderer.render(scene, camera)
@@ -121,7 +120,7 @@ function initThree (canvasEl) {
       // vertexColors: true, 
       transparent: true, opacity: 1,
       blending: THREE.AdditiveBlending,
-      transparent: true, opacity: 0.8
+      opacity: 0.8
       // sizeAttenuation: false
     })
     const maxDistance = 120

@@ -2,32 +2,34 @@ import * as THREE from 'three'
 import { Axes, PlaneXY, CombineMaterial, 
   getGeometryBoundingBox, OrbitControls } from './utils.js'
 import { degreeToRadian, randomBetween } from '@view-util'
+import textureImagePath from '@images/textures/sprite-sheet.png'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
-  Vector2, Vector3, Color, Object3D, Group,
+  Vector2, Vector3, Color, Object3D, Group, Box3, Sprite,
   PlaneGeometry,
-  Mesh, MeshLambertMaterial, MeshBasicMaterial,
+  Mesh, MeshLambertMaterial, MeshBasicMaterial, SpriteMaterial,
   AmbientLight, DirectionalLight,
-  GridHelper, CameraHelper,
+  GridHelper, CameraHelper, Box3Helper,
+  TextureLoader,
 
-  Sprite,SpriteMaterial
+  Points, PointsMaterial, CanvasTexture,
+  FogExp2
 } = THREE
 
 let renderer, scene, camera, orbitControl
 let ambientLight, directionalLight
 let axes, customPlane, plane
-let spriteGroup
 
-let spriteRotateAngle = 0
 let animationId = null
 
 const renderScene = () => renderer.render(scene, camera)
-const [planeWidth, planeHeight] = [60, 60]
+const [planeWidth, planeHeight] = [100, 100]
 const gui = { controller: null, panel: null }
 const cameraSettings = { fov: 50, near: 0.1, far: 1000,
-  position: new Vector3(planeWidth * 1.1, Math.max(planeWidth, planeHeight) * 1.5, planeHeight * 1.1),
-  lookAt: [planeWidth/2, 0, planeHeight/2] }
+  position: new Vector3(50, 70, 50),// new Vector3(planeWidth*2, Math.max(planeWidth, planeHeight)*2.5, planeHeight*2),
+  lookAt: [0,0,0]// [planeWidth/2, 0, planeHeight/2]
+}
 const colors = {
   objects: ['#F2059F', '#F2E205', '#F24405', '#418FBF', '#D9ADD2', '#AD24BF', '#F2C063'],
   line: '#6A6A6A',
@@ -35,6 +37,36 @@ const colors = {
   light: '#FFFFFF',
   ambientLight: '#888888',
   directionalLight: '#FFFFFF'
+}
+const rainDrops = new Group()
+
+const rainyAreaInfo = {
+  width: 50, // x
+  height: 60, // z
+  depth: 80 // y
+}
+class RainDrop extends Sprite {
+  constructor (material) {
+    super(material)
+    const randomFloat = v => Math.random() * v
+    const { width, height, depth } = rainyAreaInfo
+
+    this.position.set(
+      randomFloat(width),
+      depth - randomFloat(20),
+      randomFloat(height)
+    )
+    this.vy = (0.3 + randomFloat(0.3)) * -1
+  }
+
+  addTo (group) { group.add(this); }
+
+  update () {
+    this.position.y += this.vy
+
+    if (this.position.y < 0)
+      this.position.y = rainyAreaInfo.depth
+  }
 }
 
 function initThree (canvasEl) {
@@ -78,7 +110,7 @@ function initThree (canvasEl) {
   plane.receiveShadow = true
   
   scene.add(axes)
-  scene.add(customPlane)
+  // scene.add(customPlane)
   // scene.add(plane)
 
   // lights
@@ -97,35 +129,42 @@ function initThree (canvasEl) {
 
   scene.add(ambientLight)
   scene.add(directionalLight)
-  scene.add(directionalLight.target)
+  scene.add(directionalLight.target);
 
   // camera helper
   // scene.add(new CameraHelper(directionalLight.shadow.camera))
 
   // ------ objects ------ //
-  spriteGroup = new Group();
+  const textureLoader = new TextureLoader()
+  const onTextureLoad = texture => {
+    texture.name = 'rain-drop'
+    texture.needsUpdate = true
 
-  (function () {
-    const [spriteRow, spriteColumn, gap] = [6, 6, 3]
-    const material = new SpriteMaterial() // defaults to 0xFFFFFF
+    const rainDropNum = 100
 
-    for (let r=0; r<spriteRow; r++) {
-      for (let c=0; c<spriteColumn; c++) {
-        const sprite = new Sprite(material)
+    for (let i=0; i<rainDropNum; i++) {
+      const textureClone = texture.clone()
+      textureClone.needsUpdate = true
 
-        sprite.position.set(r*gap, c*gap, 0)
-        spriteGroup.add(sprite)
-      }
+      const material = new SpriteMaterial({ 
+        map: textureClone, size: 1
+      })
+      material.map.offset = new Vector2(0.2 * (i % 4), 0)
+      material.map.repeat = new Vector2(0.2, 1)
+
+      const sprite = new RainDrop(material)
+
+      sprite.addTo(rainDrops)
     }
+    scene.add(rainDrops)
+  }
 
-    spriteGroup.rotation.x = Math.PI * -0.5
-    spriteGroup.position.set(
-      planeWidth/2 - gap * spriteRow / 2,
-      0,
-      planeHeight/2 + gap * spriteColumn / 2
-    )
-    scene.add(spriteGroup)
-  })()
+  textureLoader.load(
+    textureImagePath, onTextureLoad
+  )
+
+  // add fog to the scene
+  // scene.fog = new FogExp2('#FF0000', 0.0085)
 
   // render & animate
   renderScene()
@@ -135,8 +174,8 @@ function initThree (canvasEl) {
 function animate () {
   animationId = window.requestAnimationFrame(animate)
 
-  const rotateAxis = new Vector3(0,0,1).normalize()
-  spriteGroup.rotateOnAxis(rotateAxis, degreeToRadian(0.8))
+  if (rainDrops.children.length > 0)
+    rainDrops.children.forEach(sprite => sprite.update())
 
   renderScene()
 }
