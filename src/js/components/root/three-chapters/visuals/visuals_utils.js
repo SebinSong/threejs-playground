@@ -191,9 +191,10 @@ class DepthSphere extends CombineMaterial {
 class OutlineGeometry extends LineSegments {
   constructor (geometry, color = '#ffffff') {
     const edgeGeo = new EdgesGeometry(geometry)
-    const material = new LineBasicMaterial({ color })
+    const material = new LineBasicMaterial({ color, transparent: true, opacity: 1 })
 
     super(edgeGeo, material)
+    this.material = material
   }
 }
 
