@@ -1,7 +1,7 @@
 import React, {
   useRef, useEffect
 } from 'react'
-import { initThree } from './three-chapters/visuals/bouncing_ball.js'
+import { initThree } from './three-chapters/overall/oscillation-spiral'
 
 import './App.scss'
 

@@ -8,7 +8,7 @@ import {
   MeshLambertMaterial, MeshBasicMaterial,
   MeshDepthMaterial, MultiplyBlending,
   SphereGeometry, EdgesGeometry,
-  Vector3, Group, Mesh, LineSegments
+  Vector3, Group, Mesh, LineSegments,
 } from 'three'
 
 class LineMesh extends Line {
@@ -210,6 +210,16 @@ class DepthSphere extends CombineMaterial {
   remove () { this.scene.remove(this) }
 }
 
+class OutlineGeometry extends LineSegments {
+  constructor (geometry, color = '#ffffff') {
+    const edgeGeo = new EdgesGeometry(geometry)
+    const material = new LineBasicMaterial({ color, transparent: true, opacity: 1 })
+
+    super(edgeGeo, material)
+    this.material = material
+  }
+}
+
 // util functions
 function getGeometryBoundingBox (geometry) {
   geometry.computeBoundingBox()
@@ -264,5 +274,6 @@ export {
   OrbitControls,
   FontLoader,
   TextGeometry,
+  OutlineGeometry,
   loadFont
 }
