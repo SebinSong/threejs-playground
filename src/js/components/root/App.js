@@ -1,7 +1,7 @@
 import React, {
   useRef, useEffect
 } from 'react'
-import { initThree } from './three-chapters/overall/oscillation-spiral'
+import { initThree } from './three-chapters/visuals/text-stacks.js'
 
 import './App.scss'
 

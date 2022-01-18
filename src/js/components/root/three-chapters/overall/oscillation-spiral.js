@@ -1,14 +1,14 @@
-import * as THREE from 'three'
+import THREE from '@third-parties/three-old.js'
+import { MeshLine, MeshLineMaterial } from 'meshline'
 import { Axes, CombineWithEdge, 
-  geoGeometryBoundingBox, OrbitControls
-} from '@three-util'
+  getGeometryBoundingBox
+} from '@three-util/utils-old.js'
 import { degreeToRadian, randomBetween, randomSign, 
   randomFromArray, signOf } from '@view-util'
-import { color } from 'dat.gui'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
-  Vector2, Vector3, Mesh, Group, Points, Line,
+  Vector2, Vector3, Mesh, Group, Points, Line, Color,
   BoxGeometry, SphereGeometry, BufferGeometry, Float32BufferAttribute,
   MeshBasicMaterial, MeshLambertMaterial, PointsMaterial, LineBasicMaterial,
   CatmullRomCurve3,
@@ -16,14 +16,15 @@ const {
 } = THREE
 const dotNumber = 100
 
-let renderer, scene, camera, axes, orbitControl, pointContainer, points2, spiralCurve
+let renderer, scene, camera, axes, orbitControl
+let pointContainer, points2, spiralCurve, meshCurve
 let ambientLight
 let animationId
 
 const renderScene = () => renderer.render(scene, camera)
 const [fieldWidth, fieldHeight] = [400, 300]
 const cameraSettings = {
-  position: new Vector3(0, 0, 250),
+  position: new Vector3(0, 0, fieldHeight/2),
   lookAt: [0,0,0]
   // position: new Vector3(fieldWidth/2, 300, fieldHeight*1.25),
   // lookAt: [fieldWidth/3, 0.1, fieldHeight/3*2]
@@ -66,7 +67,7 @@ function initThree (canvasEl) {
 
   // axes
   axes = new Axes({ color: colors.line, size: fieldWidth })
-  scene.add(axes)
+  // scene.add(axes)
 
   // objects
   {
@@ -74,7 +75,8 @@ function initThree (canvasEl) {
     const material = new PointsMaterial({ size: 3, color: colors.objects[2],
       transparent: true, opacity: 1, blending: THREE.AdditiveBlending })
     const geometryVertices = []
-    let radius = 0, angle = 0, radiusIncrement = 0.45, angleIncrement = degreeToRadian(45)
+    let radius = 0, angle = 0
+    let radiusIncrement = 0.45, angleIncrement = degreeToRadian(45), zIncrement = 0.8
 
     geometryVertices.push(0,0,0) // first dot
     const spreadVector3 = v => [v.x, v.y, v.z]
@@ -82,7 +84,7 @@ function initThree (canvasEl) {
       radius += radiusIncrement
       angle += angleIncrement
 
-      const dot = new Vector3(radius * Math.cos(angle), radius * Math.sin(angle), 0)
+      const dot = new Vector3(radius * Math.cos(angle), radius * Math.sin(angle), zIncrement * i)
 
       spiralVertices.push(dot)
       geometryVertices.push(...spreadVector3(dot))
@@ -97,19 +99,32 @@ function initThree (canvasEl) {
 
     // catmuli-curve
     const curve = new CatmullRomCurve3(spiralVertices)
-    const pointsGot = curve.getPoints(dotNumber * 3)
-    const curveGeometry = new BufferGeometry().setFromPoints(pointsGot)
+    const denserPoints = curve.getPoints(dotNumber * 3)
+    const spreadDenserPoints = denserPoints.reduce((accu, curr) => [...accu, ...spreadVector3(curr)], [])
+    const curveGeometry = new BufferGeometry().setFromPoints(denserPoints)
 
     pointContainer = new Points(geometry, material)
-    points2 = new Points(curveGeometry, new PointsMaterial({ size: 2, color: colors.objects[1]  }))
+    points2 = new Points(curveGeometry, new PointsMaterial({ size: 2, color: colors.objects[1] }))
     spiralCurve = new Line(curveGeometry, new LineBasicMaterial({ color: '#FFFFFF' }))
+    
+    const meshLineGeometry = new MeshLine()
+    const meshLineMaterial = new MeshLineMaterial({ 
+      color: new Color(colors.objects[4]),
+      lineWidth: 0.3, dashArray: 1/30, dashRatio: 0.05,
+      dashOffset: 100,
+      side: THREE.DoubleSide, transparent: true
+    })
+    meshLineGeometry.setPoints(spreadDenserPoints, p => 0.1 + 0.9*p)
+
+    meshCurve = new Mesh(meshLineGeometry, meshLineMaterial)
 
     // scene.add(pointContainer)
     // scene.add(points2)
-    scene.add(spiralCurve)
+    // scene.add(spiralCurve)
+    scene.add(meshCurve)
   }
 
-
+  console.log('material: ', meshCurve.material)
   // render
   renderScene()
   animate()
@@ -118,6 +133,7 @@ function initThree (canvasEl) {
 function animate () {
   animationId = window.requestAnimationFrame(animate)
 
+  meshCurve.material.uniforms.dashOffset.value -= 0.0004
   renderScene()
 }
 

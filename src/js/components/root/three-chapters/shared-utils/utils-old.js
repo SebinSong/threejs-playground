@@ -1,15 +1,14 @@
-import { ParametricGeometry } from 'three/examples/jsm/geometries/ParametricGeometry.js'
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
-import {
+import THREE from '@third-parties/three-old.js'
+
+const  {
   Line, BufferGeometry, BoxGeometry,
   LineBasicMaterial, LineDashedMaterial,
   MeshLambertMaterial, MeshBasicMaterial,
   MeshDepthMaterial, MultiplyBlending,
   SphereGeometry, EdgesGeometry,
   Vector3, Group, Mesh, LineSegments,
-} from 'three'
+  FontLoader, TextGeometry, ParametricGeometry
+} = THREE 
 import { MeshLine, MeshLineMaterial } from 'meshline'
 
 class LineMesh extends Line {
@@ -272,7 +271,6 @@ export {
   DepthSphere,
   getGeometryBoundingBox,
   ParametricGeometry,
-  OrbitControls,
   FontLoader,
   TextGeometry,
   OutlineGeometry,
