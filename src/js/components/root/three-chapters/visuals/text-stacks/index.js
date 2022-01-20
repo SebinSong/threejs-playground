@@ -6,6 +6,7 @@ import { Axes, CombineWithEdge,
 import { degreeToRadian, randomBetween, randomSign, 
   randomFromArray, signOf } from '@view-util'
 import fontJSONPath from '@assets/fonts/json/Passion_One_Regular.typeface.json'
+import { CharColumn, TextColumns } from './text-stacks_classes.js'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
@@ -15,11 +16,13 @@ const {
   MeshLambertMaterial, MeshPhongMaterial, ShadowMaterial
 } = THREE
 const renderScene = () => renderer.render(scene, camera)
-const [fieldWidth, fieldHeight] = [100, 100]
+const [fieldWidth, fieldHeight] = [150, 150]
 const cameraSettings = {
   fov: 75, near: 0.1, far: 1000, // define camera frustum
-  position: new Vector3(fieldWidth * 1.1, 70, fieldHeight * 1.1),
-  lookAt: [fieldWidth/2, 0.1, fieldHeight/2]
+  // position: new Vector3(fieldWidth * 0.65, fieldWidth * 1.05, fieldHeight * 1.1),
+  // lookAt: [fieldWidth/2, 0.1, fieldHeight/3]
+  position: new Vector3(fieldWidth * 0.7, fieldWidth * 1.05, fieldHeight * 0.85),
+  lookAt: [fieldWidth/2, 0.1, fieldHeight/3]
 }
 const colors = {
   bg: '#38D0F2',
@@ -27,11 +30,16 @@ const colors = {
   ambientLight: '#FFFFFF',
   directionalLight: '#FFFFFF'
 }
+const textColumnSettings = {
+  texts: ['CREAT', 'IVITY', 'LAB'],
+  rowDiff: 10, columnDiff: 7, gap: 4,
+  fontSize: 16
+}
 
 // variables to be shared around
 let renderer, scene, camera, axes, plane
 let ambientLight, directionalLight
-let textObject
+let textBuilding
 let animationid = null
 
 function initThree (canvasEl) {
@@ -79,7 +87,7 @@ function initThree (canvasEl) {
 
   // axes &
   {
-    axes = new Axes({ color: colors.text, size: 150 })
+    axes = new Axes({ color: colors.text, size: fieldWidth * 1.5 })
     scene.add(axes)
 
     plane = new Mesh(
@@ -100,22 +108,26 @@ function initThree (canvasEl) {
     loadFont(fontJSONPath).then(function (font) {
       if (!font) return
 
-      const textGeo = new TextGeometry('Three.js', 
-        { font, size: 10, height: 0, bevelEnabled: false })
-      const textMaterial = new MeshLambertMaterial({ color: colors.text, transparent: true, 
-        opacity: 1, side: THREE.DoubleSide, shininess: 50 })
-      const textMesh = new Mesh(textGeo, textMaterial)
-      const { width, height } = getGeometryBoundingBox(textGeo)
+      textBuilding = new Group()
 
-      textMesh.rotation.x = Math.PI * -0.5
-      textMesh.position.set(-width/2, 0, height/2)
-      textMesh.castShadow = true
+      const { texts, rowDiff, columnDiff, fontSize, gap } = textColumnSettings
+      const fontPlaneSide = fontSize * 1.3
+      const firstRowZEdge = 0.5 * fontPlaneSide * (1 - texts.length)
 
-      textObject = new Group()
-      textObject.add(textMesh)
-      textObject.position.set(fieldWidth/2, 2, fieldHeight/2)
+      texts.forEach((text, index) => {
+        const textRow = new TextColumns({
+          text, font, fontSize,
+          firstColumnHeight: 60 + -1 * index * rowDiff,
+          columnHeightDiff: columnDiff, gap
+        })
 
-      scene.add(textObject)
+        textRow.position.z = firstRowZEdge + (fontPlaneSide + gap) * index
+        textBuilding.add(textRow)
+      })
+
+      textBuilding.position.set(
+        fontPlaneSide * 3, 0, fontPlaneSide * 4)
+      scene.add(textBuilding)
     })
   }
 

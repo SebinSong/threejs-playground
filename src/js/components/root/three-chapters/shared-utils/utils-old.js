@@ -130,13 +130,14 @@ class Sphere extends Mesh {
 }
 
 class CombineMaterial extends Group {
-  constructor (geometry, materials, shadow = false) {
+  constructor (geometry, materials, shadow = false, receiveShadow = false) {
     super()
 
     for (const material of materials) {
       const mesh = new Mesh (geometry, material)
 
       mesh.castShadow = shadow
+      mesh.receiveShadow = receiveShadow
       this.add(mesh)
     }
 
