@@ -10,6 +10,7 @@ const  {
   FontLoader, TextGeometry, ParametricGeometry
 } = THREE 
 import { MeshLine, MeshLineMaterial } from 'meshline'
+import { Color } from 'three';
 
 class LineMesh extends Line {
   constructor ({
@@ -261,6 +262,33 @@ async function loadFont (url) {
   })
 }
 
+class GeometryToMeshLine extends Mesh {
+  constructor ({
+    geometry = null, transparent = false, opacity = 1,
+    color = '#FFFFFF', lineWidth = 1, dashArray = 0,
+    dashOffset = 0, dashRatio = 0
+  }) {
+    if (!geometry) {
+      super()
+
+      return
+    }
+
+    const geoPoints = geometry.getAttribute('position').array
+
+    const meshLineGeometry = new MeshLine()
+    const meshLineMaterial = new MeshLineMaterial({
+      color: new Color(color), lineWidth, dashArray,
+      dashRatio, dashOffset, side: THREE.DoubleSide,
+      transparent, opacity
+    })
+
+    meshLineGeometry.setPoints(geoPoints)
+
+    super(meshLineGeometry, meshLineMaterial)
+  }
+}
+
 export {
   LineMesh,
   Axes,
@@ -277,5 +305,6 @@ export {
   OutlineGeometry,
   loadFont,
   MeshLine,
-  MeshLineMaterial
+  MeshLineMaterial,
+  GeometryToMeshLine
 }

@@ -1,45 +1,41 @@
-import THREE from '@third-parties/three-old.js'
-import { MeshLine, MeshLineMaterial } from 'meshline'
-import { Axes, CombineWithEdge, 
-  getGeometryBoundingBox, loadFont
-} from '@three-util/utils-old.js'
-import { degreeToRadian, randomBetween, randomSign, 
-  randomFromArray, signOf } from '@view-util'
+import * as THREE from 'three'
+import { loadFont, OrbitControls } from '@three-util'
 import fontJSONPath from '@assets/fonts/json/Passion_One_Regular.typeface.json'
-import { CharColumn, TextColumns } from './text-stacks_classes.js'
+import { TextColumns, CircleWaveCentral, VerticalLines } from './text-stacks_classes.js'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
-  Object3D, Vector3, Mesh, Color, Group,
+  Object3D, Vector3, Mesh, Group, Color,
   AmbientLight, DirectionalLight,
-  PlaneGeometry, SphereGeometry, TextGeometry,
-  MeshLambertMaterial, MeshPhongMaterial, ShadowMaterial
+  PlaneGeometry, MeshLambertMaterial,
+  GridHelper
 } = THREE
 const renderScene = () => renderer.render(scene, camera)
 const [fieldWidth, fieldHeight] = [150, 150]
 const cameraSettings = {
-  fov: 75, near: 0.1, far: 1000, // define camera frustum
-  // position: new Vector3(fieldWidth * 0.65, fieldWidth * 1.05, fieldHeight * 1.1),
-  // lookAt: [fieldWidth/2, 0.1, fieldHeight/3]
-  position: new Vector3(fieldWidth * 0.7, fieldWidth * 1.05, fieldHeight * 0.85),
+  fov: 75, near: 0.1, far: 2000, // define camera frustum
+  position: new Vector3(fieldWidth * 0.65, fieldWidth * 1.05, fieldHeight * 1.1),
   lookAt: [fieldWidth/2, 0.1, fieldHeight/3]
 }
 const colors = {
-  bg: '#38D0F2',
+  bg: '#F2B90C',
   text: '#021F59',
+  plane: '#081A40',
   ambientLight: '#FFFFFF',
-  directionalLight: '#FFFFFF'
+  directionalLight: '#FFFFFF',
+  grid: '#FFFFFF'
 }
 const textColumnSettings = {
-  texts: ['CREAT', 'IVITY', 'LAB'],
+  texts: ['GIMME', 'SOME', 'LOVE'],
   rowDiff: 10, columnDiff: 7, gap: 4,
   fontSize: 16
 }
+const PLANE_SIZE = 700
 
 // variables to be shared around
-let renderer, scene, camera, axes, plane
+let renderer, scene, camera, orbitControl, plane, grid
 let ambientLight, directionalLight
-let textBuilding
+let textBuilding, textRowArr = [], circleWaveCentral, verticalLines
 let animationid = null
 
 function initThree (canvasEl) {
@@ -51,13 +47,18 @@ function initThree (canvasEl) {
 
   scene = new Scene()
 
-  // define camera
+  // define camera & orbitControl
   {
     const { fov, near, far, position, lookAt } = cameraSettings
 
     camera = new PerspectiveCamera(fov, 1, near, far)
     camera.position.copy(position)
     camera.lookAt(...lookAt)
+
+    // control
+    orbitControl = new OrbitControls(camera, canvasEl)
+    orbitControl.screenSpacePanning = true
+    orbitControl.update()
   }
 
   // configure renderer & camera based on screen dimensions
@@ -85,21 +86,22 @@ function initThree (canvasEl) {
     scene.add(ambientLight, directionalLight, directionalLight.target)
   }
 
-  // axes &
+  // plane
   {
-    axes = new Axes({ color: colors.text, size: fieldWidth * 1.5 })
-    scene.add(axes)
-
     plane = new Mesh(
-      new PlaneGeometry(fieldWidth, fieldHeight),
-      new ShadowMaterial({ opacity: 0.3 })
-      // new MeshLambertMaterial({ color: colors.bg, side: THREE.DoubleSide, 
-      //   transparent: true, opacity: 1 })
+      new PlaneGeometry(PLANE_SIZE, PLANE_SIZE),
+      new MeshLambertMaterial({ color: colors.plane,
+        side: THREE.DoubleSide, transparent: true, opacity: 1
+      })
     )
     plane.rotation.x = Math.PI * -0.5
-    plane.position.set(fieldWidth/2, 0, fieldHeight/2)
+    plane.rotation.z = Math.PI * 0.5
     plane.receiveShadow = true
 
+    grid = new GridHelper(PLANE_SIZE, 8, new Color(colors.grid))
+    grid.position.y = 0.1
+
+    scene.add(grid)
     scene.add(plane)
   }
 
@@ -118,17 +120,31 @@ function initThree (canvasEl) {
         const textRow = new TextColumns({
           text, font, fontSize,
           firstColumnHeight: 60 + -1 * index * rowDiff,
-          columnHeightDiff: columnDiff, gap
+          columnHeightDiff: columnDiff, gap,
+          outlined: index % 2 === 0 ? 'even' : 'odd',
+          updateDelay: 300 * index
         })
 
         textRow.position.z = firstRowZEdge + (fontPlaneSide + gap) * index
+        
+        textRowArr.push(textRow)
         textBuilding.add(textRow)
       })
 
-      textBuilding.position.set(
-        fontPlaneSide * 3, 0, fontPlaneSide * 4)
+      textBuilding.position.x = -1 * fontPlaneSide * 2.2
       scene.add(textBuilding)
+
+      circleWaveCentral = new CircleWaveCentral({
+        scene, initRadius: 40, radiusMax: 320,
+        dotAmount: 24, interval: 3000
+      })
     })
+
+    verticalLines = new VerticalLines({ 
+      lineSize: 800, 
+      planeSide: PLANE_SIZE})
+
+    scene.add(verticalLines)
   }
 
   renderScene()
@@ -137,6 +153,11 @@ function initThree (canvasEl) {
 
 function animate () {
   animationid = window.requestAnimationFrame(animate)
+
+  textRowArr.forEach(textRow => textRow.update())
+
+  if(circleWaveCentral)
+    circleWaveCentral.update()
 
   renderScene()
 }
@@ -154,6 +175,9 @@ function configureRendererAndCamera () {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
   }
+
+  if (orbitControl)
+    orbitControl.update()
 }
 
 function setupEventListeners () {
