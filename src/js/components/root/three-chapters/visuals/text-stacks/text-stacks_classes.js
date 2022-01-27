@@ -6,7 +6,7 @@ import { degreeToRadian } from '@view-util'
 
 const { Mesh, Group, Vector3,
   PlaneGeometry, BoxGeometry, CircleGeometry,
-  MeshLambertMaterial, MeshBasicMaterial
+  MeshLambertMaterial, MeshBasicMaterial, MeshToonMaterial,
 } = THREE
 const colors = {
   text: '#FFFFFF',
@@ -77,7 +77,7 @@ class CharColumn extends Group {
     // column body
     const columnBodyGeometry = new BoxGeometry(
       fontPlaneSide, fontPlaneSide, columnHeight)
-    const columnBodyMaterial = new MeshLambertMaterial({
+    const columnBodyMaterial = new MeshToonMaterial({
       color: colors.columnSide, transparent: true, opacity: 1,
       side: THREE.DoubleSide
     })

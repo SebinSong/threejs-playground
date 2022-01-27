@@ -1,7 +1,7 @@
 import React, {
   useRef, useEffect
 } from 'react'
-import { initThree } from './three-chapters/visuals/text-stacks'
+import { initThree } from './three-chapters/visuals/city-3d'
 
 import './App.scss'
 
