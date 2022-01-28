@@ -1,19 +1,18 @@
 import * as THREE from 'three'
-import { loadFont, OrbitControls, Axes } from '@three-util'
+import { loadFont, OrbitControls } from '@three-util'
 import { degreeToRadian, randomSign } from '@view-util'
-import { Smoke, Building, Town, Car } from './city-3d-classes.js'
+import { Smoke, Building, Town, Car, LazorCars, Plane } from './city-3d-classes.js'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera, Fog,
   Object3D, Vector3, Mesh, Group, Color,
-  AmbientLight, DirectionalLight,
+  AmbientLight, SpotLight, SpotLightHelper, DirectionalLight, PointLight,
   BoxGeometry, CircleGeometry,
-  MeshStandardMaterial, MeshLambertMaterial, MeshToonMaterial,
-  GridHelper
+  MeshStandardMaterial, MeshLambertMaterial, MeshToonMaterial
 } = THREE
 const cameraSettings = {
   fov: 20, near: 1, far: 500,
-  position:  new Vector3(25, 25, 25), // new Vector3(0, 2, 14),
+  position: new Vector3(50, 50, 50), // new Vector3(0, 2, 14),
   lookAt: [0, 0, 0]
 }
 const colors = {
@@ -22,16 +21,15 @@ const colors = {
   building: '#000000',
   wire: '#FFFFFF',
   beam: '#FFFF00',
-  gridMiddle: '#FF0000',
   gridLine: '#000000',
   ambientLight: '#FFFFFF',
   smoke: '#FFFF00'
 }
-const [uSpeed] = [0.001]
+const [BUILDING_HEIGHT_MAX, TOWN_RANGE] = [6, 5]
 
-let renderer, scene, camera, axes, grid
-let city, town, smoke, building, car
-let ambientLight
+let renderer, scene, camera, grid, orbitControl
+let city, town, smoke, building, car, cars, plane
+let ambientLight, spotLight, pointLight
 let animationid = null
 const renderScene = () => renderer.render(scene, camera)
 
@@ -42,7 +40,7 @@ function initThree (canvasEl) {
   renderer.shadowMap.enabled = true
 
   scene = new Scene()
-  // scene.fog = new Fog(colors.fog, 10, 16)
+  scene.fog = new Fog(colors.fog, 15, 30)
 
   // define camera
   {
@@ -51,16 +49,14 @@ function initThree (canvasEl) {
     camera = new PerspectiveCamera(fov, 1, near, far)
     camera.position.copy(position)
     camera.lookAt(...lookAt)
+
+    orbitControl = new OrbitControls(camera, canvasEl)
+    orbitControl.screenSpacePanning = true
+    orbitControl.update()
   }
 
   configureRendererAndCamera()
   setupEventListeners()
-
-  // axe & plane
-  {
-    axes = new Axes({ color: '#FFFFFF', size: 100 })
-    scene.add(axes)
-  }
 
   // create city & objects
   {
@@ -69,61 +65,57 @@ function initThree (canvasEl) {
 
     // town
     town = new Town({
-      rangeLength: 8,
-      buildingAmount: 100,
+      rangeLength: TOWN_RANGE,
+      buildingAmount: 25,
       sideLength: 1,
-      heightMin: 1, heightMax: 8,
+      heightMin: 1, heightMax: BUILDING_HEIGHT_MAX,
       segments: 2, color: colors.building
     })
     city.add(town)
 
-    // for (let i=0; i<buildingAmount; i++) {
-    //   const geometry = new BoxGeometry(1, 1, 1, segment, segment, segment)
-    //   const cube = new Mesh(geometry, buildingMaterial)
-    //   const floor = new Mesh(geometry, buildingMaterial)
-
-    //   cube.castShadow = true
-    //   cube.receiveShadow = true
-
-    //   cube.scale.y = randomVal()
-    //   cube.scale.x = cube.scale.z = cubeWidth + randomFloat(1 - cubeWidth)
-    //   cube.position.x = randomFloat(8, true)
-    //   cube.position.z = randomFloat(8, true)
-
-    //   floor.scale.y = 0.05;
-    //   floor.position.set(
-    //     cube.position.x, 0, cube.position.z
-    //   )
-
-    //   town.add(floor)
-    //   town.add(cube)
-
-    //   city.add(town)
-
-    //   scene.add(city)
-    // }
-
     // smoke
     smoke = new Smoke({
-      distance: 20, amount: 150, color: colors.smoke,
-      particleRadius: 0.03,
+      distance: 20, amount: 200, color: colors.smoke,
+      particleRadius: 0.025,
       rotationSpeed: degreeToRadian(0.3)
     })
 
     city.add(smoke)
 
-    // car
-    car = new Car({ distance: 40, length: 2 })
-    city.add(car)
+    // cars
+    cars = new LazorCars({
+      travelDistance: 40, carLength: 2,
+      yMax: BUILDING_HEIGHT_MAX, 
+      xzRange: TOWN_RANGE, carAmount: 35
+    })
+
+    city.add(cars)
 
     // grid
-    grid = new GridHelper(60, 120, colors.gridMiddle, colors.gridLine)
-    city.add(grid)
+    plane = new Plane({ size: 60, color: colors.gridLine, gridMiddleColor: colors.bg })
+
+    city.add(plane)
 
     // lights
-    ambientLight = new AmbientLight(colors.ambientLight, 4)
+    const [spotPos, spotShadowSize] = [BUILDING_HEIGHT_MAX * 1.25, 3000]
 
-    scene.add(ambientLight)
+    ambientLight = new AmbientLight(colors.ambientLight, 4)
+    spotLight = new SpotLight(colors.ambientLight, 50, 20)
+    pointLight = new PointLight(colors.ambientLight, 0.5)
+    
+    spotLight.position.set(spotPos, spotPos, spotPos)
+    spotLight.target.position.set(0, BUILDING_HEIGHT_MAX, 0)
+
+    spotLight.castShadow = true
+    spotLight.shadow.mapSize.width = spotLight.shadow.mapSize.height = spotShadowSize 
+    spotLight.penumbra = 0.1
+
+    pointLight.position.set(0, BUILDING_HEIGHT_MAX * 1.1, 0)
+
+    scene.add(ambientLight, pointLight)
+    scene.add(spotLight)
+    scene.add(spotLight.target)
+    // scene.add(new SpotLightHelper(spotLight))
   }
 
   renderScene()
@@ -147,7 +139,7 @@ function animate () {
   //   city.rotation.x = 1;
 
   smoke.update()
-  car.update()
+  cars.update()
   renderScene()
 }
 
@@ -164,6 +156,9 @@ function configureRendererAndCamera () {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
   }
+
+  if (orbitControl)
+    orbitControl.update()
 }
 
 function onWindowResize () {

@@ -1,10 +1,11 @@
 import * as THREE from 'three'
-import { CombineWithEdge } from '@three-util'
+import { CombineWithEdge, CombineMaterial } from '@three-util'
 import { randomSign, degreeToRadian } from '@view-util'
 
 const {
-  MeshToonMaterial, MeshStandardMaterial,
-  CircleGeometry, BoxGeometry,
+  MeshToonMaterial, MeshStandardMaterial, MeshLambertMaterial, MeshPhongMaterial,
+  CircleGeometry, BoxGeometry, PlaneGeometry,
+  GridHelper,
   Group, Mesh
 } = THREE
 
@@ -19,7 +20,7 @@ let buildingIndex = 0, carIndex = 0
 class Smoke extends Group {
   constructor ({
     distance =  20,
-    particleRadius = 0.2,
+    particleRadius = 0.05,
     amount = 100, color = '#FFFFFF',
     rotationSpeed = degreeToRadian(0.2)
   }) {
@@ -65,7 +66,6 @@ class Building extends Group {
       segments = 2,
       color = '#FFFFFF'
     } = args
-    const colorSet = colors.buildings
 
     const geometry = new BoxGeometry(
       sideLength * 0.95, height, sideLength * 0.95,
@@ -73,14 +73,20 @@ class Building extends Group {
     )
     const floorGeometry = new BoxGeometry(sideLength, 0.05, sideLength)
     const material = new MeshStandardMaterial({
-      color: colorSet[buildingIndex % colorSet.length], side: THREE.DoubleSide
+      color: '#000000', // colorSet[buildingIndex % colorSet.length],
+      side: THREE.DoubleSide,
+      metalness: 0.6,
+      roughness: 10
     })
+    const wireMaterial = new MeshLambertMaterial({
+      color: '#FFFFFF', side: THREE.DoubleSide, wireframe: true,
+      opacity: 0.025, transparent: true
+    })
+
     buildingIndex++
 
-    const building = new CombineWithEdge({
-      geometry, material, edgeColor: colors.buildingEdge, 
-      shadow: true })
     const floor = new Mesh(floorGeometry, material)
+    const building = new CombineMaterial(geometry, [material, wireMaterial], true)
 
     building.position.y = height / 2
 
@@ -145,14 +151,15 @@ class Town extends Group {
 }
 
 class Car extends Mesh {
-  constructor ({ distance = 20, length = 2, yMax = 4, xzRange = 4 }) {
+  constructor ({ distance = 20, length = 2, yMax = 4, 
+    xzRange = 4, delay = 0 }) {
     carIndex++
 
-    const thickness = length / 60
+    const thickness = length / 200
     const along = carIndex % 2 === 1 ? 'x' : 'z'
     const perpendicular = along === 'x' ? 'z' : 'x'
     const material = new MeshToonMaterial({ color: colors.smoke, side: THREE.DoubleSide })
-    
+
     let geometry
 
     if (along === 'x')
@@ -170,9 +177,12 @@ class Car extends Mesh {
     this.position[perpendicular] = randomSign() * (xzRange* 0.6 * Math.random())
 
     this.velocity = {
-      current: 0.025, init: 0.025, sign: velSign,
-      accel: 0.0125, max: 1.15
+      sign: velSign,
+      current: 0.025, init: 0.025, 
+      accel: 0.005 + Math.random() * 0.01, 
+      max: 0.8 + Math.random() * 0.3
     }
+    this.aniStatus = { tStart: null, delay }
 
     this.along = along
     this.distance = distance
@@ -181,9 +191,21 @@ class Car extends Mesh {
   resetVelocity () {
     this.velocity.sign *= -1
     this.velocity.current = this.velocity.init
+
+    // this.aniStatus.tStart = null
   }
 
   update () {
+    const tNow = Date.now()
+
+    if (!this.aniStatus.tStart)
+      this.aniStatus.tStart = tNow
+
+    const { tStart, delay } = this.aniStatus
+    const tPassed = tNow - tStart
+
+    if (tPassed <= delay) return
+
     const clamp = (v, max) => {
       if (v < -1 * max) v = -1 * max
       else if (v > max) v = max
@@ -202,6 +224,49 @@ class Car extends Mesh {
   }
 }
 
+class LazorCars extends Group {
+  constructor ({
+    carLength = 2, travelDistance = 40, yMax = 4,
+    xzRange = 4, carAmount = 20
+  }) {
+    super()
+    this.cars = []
+
+    for (let i=0; i<carAmount; i++) {
+      const car = new Car({ 
+        distance: travelDistance, length: carLength,
+        yMax, xzRange,
+        delay: 500 + Math.random() * 2000
+      })
+
+      this.cars.push(car)
+      this.add(car)
+    }
+  }
+
+  update () { this.cars.forEach(car => car.update()) }
+}
+
+class Plane extends Group {
+  constructor ({ gridMiddleColor = '#FFFFFF', color = "#000000", size = 20 }) {
+    super()
+
+    const geometry = new PlaneGeometry(size, size)
+    const material = new MeshPhongMaterial({ 
+      color, shininess: 50, transparent: true, opacity: 1,
+      side: THREE.DoubleSide
+    })
+    const plane = new Mesh(geometry, material)
+    const grid = new GridHelper(size, size*2, gridMiddleColor, color)
+
+    plane.receiveShadow = true
+    plane.rotation.x = Math.PI * -0.5
+
+    this.add(plane)
+    this.add(grid)    
+  }
+}
+
 export {
-  Smoke, Building, Town, Car
+  Smoke, Building, Town, Car, LazorCars, Plane
 }
