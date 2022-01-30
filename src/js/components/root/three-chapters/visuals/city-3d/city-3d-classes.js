@@ -155,7 +155,7 @@ class Car extends Mesh {
     xzRange = 4, delay = 0 }) {
     carIndex++
 
-    const thickness = length / 200
+    const thickness = length / 400
     const along = carIndex % 2 === 1 ? 'x' : 'z'
     const perpendicular = along === 'x' ? 'z' : 'x'
     const material = new MeshToonMaterial({ color: colors.smoke, side: THREE.DoubleSide })
@@ -179,8 +179,8 @@ class Car extends Mesh {
     this.velocity = {
       sign: velSign,
       current: 0.025, init: 0.025, 
-      accel: 0.005 + Math.random() * 0.01, 
-      max: 0.8 + Math.random() * 0.3
+      accel: 0.003 + Math.random() * 0.01, 
+      max: 0.3 + Math.random() * 0.2
     }
     this.aniStatus = { tStart: null, delay }
 
