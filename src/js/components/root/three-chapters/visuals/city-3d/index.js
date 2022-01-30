@@ -22,13 +22,13 @@ const colors = {
   smoke: '#FFFF00'
 }
 const mouse = new Vector2(0, 0)
-const [BUILDING_HEIGHT_MAX, TOWN_RANGE] = [6, 5]
+const [BUILDING_HEIGHT_MAX, TOWN_RANGE] = [4, 5]
 const cameraSettings = {
   fov: 20, near: 1, far: 500,
   position: new Vector3(
-    BUILDING_HEIGHT_MAX * 1.5,
-    BUILDING_HEIGHT_MAX * 2,
-    BUILDING_HEIGHT_MAX * 1.5), // new Vector3(0, 2, 14),
+    TOWN_RANGE * 2.25,
+    BUILDING_HEIGHT_MAX * 3,
+    TOWN_RANGE * 2.25), // new Vector3(0, 2, 14),
   lookAt: [0, 0, 0]// [0, 0, 0]
 }
 
@@ -46,7 +46,7 @@ function initThree (canvasEl) {
   renderer.shadowMap.enabled = true
 
   scene = new Scene()
-  scene.fog = new Fog(colors.fog, 8, 40)
+  scene.fog = new Fog(colors.fog, 8, 30)
 
   // define camera
   {
@@ -70,7 +70,7 @@ function initThree (canvasEl) {
     // town
     town = new Town({
       rangeLength: TOWN_RANGE,
-      buildingAmount: 20,
+      buildingAmount: 25,
       sideLength: 1,
       heightMin: 1, heightMax: BUILDING_HEIGHT_MAX,
       segments: 2, color: colors.building
@@ -79,9 +79,10 @@ function initThree (canvasEl) {
 
     // smoke
     smoke = new Smoke({
-      distance: 20, amount: 200, color: colors.smoke,
-      particleRadius: 0.025,
-      rotationSpeed: degreeToRadian(0.3)
+      distance: TOWN_RANGE * 1.2, amount: 300,
+      color: colors.smoke,
+      particleRadius: 0.0075,
+      rotationSpeed: degreeToRadian(0.2)
     })
 
     city.add(smoke)
@@ -101,14 +102,14 @@ function initThree (canvasEl) {
     city.add(plane)
 
     // lights
-    const [spotPos, spotShadowSize] = [BUILDING_HEIGHT_MAX * 1.5, 3000]
+    const [spotPos, spotShadowSize] = [BUILDING_HEIGHT_MAX * 1.25, 3000]
 
     ambientLight = new AmbientLight(colors.ambientLight, 4)
-    spotLight = new SpotLight(colors.ambientLight, 100, 20)
+    spotLight = new SpotLight(colors.ambientLight, 20, 40)
     pointLight = new PointLight(colors.ambientLight, 0.85)
     
     spotLight.position.set(spotPos, spotPos * 1.75, spotPos)
-    spotLight.target.position.set(-1 * TOWN_RANGE, BUILDING_HEIGHT_MAX * 0.5, -1 * TOWN_RANGE)
+    spotLight.target.position.set(-1 * TOWN_RANGE, 0, -1 * TOWN_RANGE)
 
     spotLight.castShadow = true
     spotLight.shadow.mapSize.width = spotLight.shadow.mapSize.height = spotShadowSize 
@@ -129,14 +130,13 @@ function initThree (canvasEl) {
 // helpers
 
 function animate () {
-  theta += 0.2
   animationid = window.requestAnimationFrame(animate)
 
-  // // city rotation
+  // city rotation
   const rotationSign = { y: signOf(mouse.x), x: signOf(mouse.y) * -1 }
   
   city.rotation.y += (rotationSign.y * degreeToRadian(0.03) + mouse.x * 0.015) 
-  city.rotation.x += (rotationSign.x * degreeToRadian(0.02) + mouse.y * 0.003)
+  city.rotation.x += (rotationSign.x * degreeToRadian(0.02) + mouse.y * 0.012)
 
   if (city.rotation.x >= 0.6)
     city.rotation.x = 0.6

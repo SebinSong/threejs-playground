@@ -32,6 +32,7 @@ class Smoke extends Group {
     })
     const geometry = new CircleGeometry(particleRadius, 32)
     const randomFloat = v => randomSign() * v * Math.random()
+    const randomAngle = () => randomSign() * Math.random() * Math.PI
 
     this.particles = []
     for (let i=0; i<amount; i++) {
@@ -42,10 +43,15 @@ class Smoke extends Group {
         randomFloat(distance),
         randomFloat(distance)
       )
+      particle.rotation.x = randomAngle()
+      particle.rotation.y = randomAngle()
+      particle.rotation.z = randomAngle()
 
       this.particles.push(particle)
       this.add(particle)
     }
+
+    this.position.y = 4
 
     this.rotationSpeed = rotationSpeed
   }
