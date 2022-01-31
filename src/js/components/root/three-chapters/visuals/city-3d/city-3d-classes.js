@@ -70,7 +70,7 @@ class Building extends Group {
       sideLength = 1,
       height = 1,
       segments = 2,
-      color = '#FFFFFF'
+      color = '#000000'
     } = args
 
     const geometry = new BoxGeometry(
@@ -79,7 +79,7 @@ class Building extends Group {
     )
     const floorGeometry = new BoxGeometry(sideLength, 0.05, sideLength)
     const material = new MeshStandardMaterial({
-      color: '#000000', // colorSet[buildingIndex % colorSet.length],
+      color, // colorSet[buildingIndex % colorSet.length],
       side: THREE.DoubleSide,
       metalness: 0.6,
       roughness: 10

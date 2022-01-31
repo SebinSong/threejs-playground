@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { Axes } from '@three-util'
 import { degreeToRadian } from '@view-util'
-import { Sphere } from './sphere-particle-classes.js'
+import { Sphere, WaveEntity, Waves } from './sphere-particle-classes.js'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
@@ -16,10 +16,11 @@ const colors = {
   object: '#DDDDDD',
   axes: '#FFFF00',
   ambientLight: '#FFFFFF',
-  spotLight: '#FFFFFF'
+  spotLight: '#FFFFFF',
+  wave: '#FFFFFF'
 }
 const mouse = new Vector2(0,0)
-const [SPHERE_RADIUS, PARTICLE_AMOUNT] = [15, 1300]
+const [SPHERE_RADIUS, PARTICLE_AMOUNT] = [15, 1200]
 const cameraSettings = {
   fov: 45, near: 0.1, far: 1000,
   position: new Vector3(0, 0, SPHERE_RADIUS*4.5),
@@ -29,7 +30,7 @@ const cameraSettings = {
 // varaiables to be shared around
 let renderer, scene, camera
 let axes, ambientLight, spotLight
-let sphere
+let sphere, wave, waves
 let animationId = null
 const renderScene = () => renderer.render(scene, camera)
 
@@ -87,6 +88,11 @@ function initThree (canvasEl) {
       rotationSpeed: degreeToRadian(0.25)
     })
 
+    waves = new Waves({
+      waveAmount: 5, dotAmount: 8, length: SPHERE_RADIUS * 2 * 0.9
+    })
+
+    scene.add(waves)
     scene.add(sphere)
   }
 
@@ -98,6 +104,7 @@ function animate () {
   animationId = window.requestAnimationFrame(animate)
 
   sphere.update()
+  waves.update()
   renderScene()
 }
 
@@ -111,7 +118,6 @@ function configureRendererAndCamera () {
 
   if (width !== desiredWidth || height !== desiredHeight)
     renderer.setSize(desiredWidth, desiredHeight, false)
-
   if (camera.aspect !== aspectRatio) {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
