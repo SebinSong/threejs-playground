@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { randomSign, degreeToRadian } from '@view-util'
+import { randomSign, degreeToRadian, signOf } from '@view-util'
 
 const {
   SphereGeometry, Mesh, BufferGeometry,
@@ -63,7 +63,11 @@ class Sphere extends Group {
     this.particles = []
 
     this.rotationSpeed = rotationSpeed
+    this.extraSpeed = new ExtraAngleSpeed({
+      inputRange: [0, 200], outputRange: [0, degreeToRadian(5)]
+    })
     this.position.copy(spherePosition)
+
 
     for (let i=0; i<particleAmount; i++) {
       const dirVector = randomVector3()
@@ -80,10 +84,11 @@ class Sphere extends Group {
     }
   }
 
-  update () {
-    this.rotation.y += this.rotationSpeed
+  update (xMoveVal = 0) {
+    this.rotation.y += (this.rotationSpeed + this.extraSpeed.currentValue)
 
     this.particles.forEach(particle => particle.update())
+    this.extraSpeed.update(xMoveVal)
   }
 }
 
@@ -196,7 +201,6 @@ class Waves extends Group {
 
     for (let i=0; i<waveAmount; i++) {
       const color = rgbString(rgbMin + i * rgbUnit)
-      console.log('color: ', color)
       const wave = new WaveEntity({ color, dotAmount, length })
 
       this.waves.push(wave)
@@ -206,6 +210,51 @@ class Waves extends Group {
 
   update () {
     this.waves.forEach(wave => wave.update())
+  }
+}
+
+class ExtraAngleSpeed {
+  constructor ({
+    inputRange = [0, 1], outputRange = [0, 1]
+  }) {
+    this.currentValue = 0
+    this.inputRange = inputRange
+    this.outputRange = outputRange
+    this.f = 0.965
+  }
+
+  getOutputVal (inputVal) {
+    const [i1, i2, o1, o2] = [...this.inputRange, ...this.outputRange]
+    const [dInput, dOutput] = [i2 - i1, o2 - o1]
+
+    if (inputVal < i1) inputVal = i1
+    else if (inputVal > i2) inputVal = i2
+
+    const t = (inputVal - i1) / dInput
+
+    return o1 + dOutput * t 
+  }
+
+  clampVal (lowerLimit, upperLimit) {
+    const [o1, o2] = this.outputRange
+
+    if (this.currentValue >= upperLimit)
+      this.currentValue = o2
+    else if (this.currentValue <= lowerLimit)
+      this.currentValue = o1
+  }
+
+  update (val = 0) {
+    this.currentValue *= this.f
+
+    if (val <= 0)
+      return
+
+    const valueToAdd = this.getOutputVal(val)
+    if (this.currentValue < valueToAdd)
+      this.currentValue += this.getOutputVal(val)
+
+    this.clampVal(0.002, this.outputRange[1] * 1.5)
   }
 }
 

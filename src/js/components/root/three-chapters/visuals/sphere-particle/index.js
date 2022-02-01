@@ -31,14 +31,14 @@ const cameraSettings = {
 let renderer, scene, camera
 let axes, ambientLight, spotLight
 let sphere, wave, waves
-let animationId = null
+let animationId = null, mouseMoveTimeoutId = null
 const renderScene = () => renderer.render(scene, camera)
 
 function initThree (canvasEl) {
   // renderer & camera
-  renderer = new WebGLRenderer({ 
+  renderer = new WebGLRenderer({
     canvas: canvasEl, apha: true, antialias: true })
-  
+
   renderer.setClearColor(new Color(colors.bg), 1)
   renderer.shadowMap.enabled = true
 
@@ -103,7 +103,7 @@ function initThree (canvasEl) {
 function animate () {
   animationId = window.requestAnimationFrame(animate)
 
-  sphere.update()
+  sphere.update(mouse.xVel)
   waves.update()
   renderScene()
 }
@@ -133,12 +133,15 @@ function setupEventListeners () {
   window.addEventListener('resize', onWindowResize)
 
   window.addEventListener('mousemove', e => {
-    const { clientX, clientY } = e
+    const { clientX, clientY, movementX } = e
 
     mouse.set(
       clientX / window.innerWidth - 0.5,
-      clientY / window.innerHeight - 0.5
-    )
+      clientY / window.innerHeight - 0.5)
+    mouse.xVel = movementX || 0
+
+    window.clearTimeout(mouseMoveTimeoutId)
+    mouseMoveTimeoutId = window.setTimeout(() => { mouse.xVel = 0 }, 50)
   })
 }
 
