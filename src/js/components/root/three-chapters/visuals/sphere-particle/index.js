@@ -26,6 +26,12 @@ const cameraSettings = {
   position: new Vector3(0, 0, SPHERE_RADIUS*4.5),
   lookAt: [0,0,0]
 }
+const throttle = new (function () {
+  this.interval = 150
+  this.prev = null
+
+  this.reset = () => { this.prev = Date.now() }
+})()
 
 // varaiables to be shared around
 let renderer, scene, camera
@@ -103,7 +109,7 @@ function initThree (canvasEl) {
 function animate () {
   animationId = window.requestAnimationFrame(animate)
 
-  sphere.update(mouse.xVel)
+  sphere.update(mouse)
   waves.update()
   renderScene()
 }
@@ -135,13 +141,18 @@ function setupEventListeners () {
   window.addEventListener('mousemove', e => {
     const { clientX, clientY, movementX } = e
 
-    mouse.set(
-      clientX / window.innerWidth - 0.5,
-      clientY / window.innerHeight - 0.5)
-    mouse.xVel = movementX || 0
+    if (throttle.prev === null || 
+      (Date.now() - throttle.prev >= throttle.interval)) {
+      throttle.reset()
+
+      mouse.x = clientX / window.innerWidth - 0.5
+      mouse.xVel = movementX || 0
+    }
 
     window.clearTimeout(mouseMoveTimeoutId)
-    mouseMoveTimeoutId = window.setTimeout(() => { mouse.xVel = 0 }, 50)
+    mouseMoveTimeoutId = window.setTimeout(() => {
+      mouse.y = clientY / window.innerHeight - 0.5
+    }, 50)
   })
 }
 

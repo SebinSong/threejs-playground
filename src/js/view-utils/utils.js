@@ -1,3 +1,5 @@
+import easeFuncFactory from './easeFunctionFactory'
+
 function randomFromArray (arr) {
   if (Array.isArray(arr))
     return arr[Math.floor(Math.random() * arr.length)]
@@ -22,5 +24,6 @@ export {
   degreeToRadian,
   randomBetween,
   randomSign,
-  signOf
+  signOf,
+  easeFuncFactory
 }

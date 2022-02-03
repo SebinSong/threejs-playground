@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { randomSign, degreeToRadian, signOf } from '@view-util'
+import { randomSign, degreeToRadian, signOf, easeFuncFactory } from '@view-util'
 
 const {
   SphereGeometry, Mesh, BufferGeometry,
@@ -59,7 +59,7 @@ class Sphere extends Group {
     rotationSpeed = degreeToRadian(0.3)
   }) {
     super()
-
+ 
     this.particles = []
 
     this.rotationSpeed = rotationSpeed
@@ -82,13 +82,51 @@ class Sphere extends Group {
       this.particles.push(particle)
       this.add(particle)
     }
+
+    this.mouseX = this.mouseY = null
+    this.xRotationAni = {
+      tStart: null, duration: 400,
+      endValueCalc: yVal => yVal * degreeToRadian(20)
+    }
+
+    this.xRotationAni = new (function () {
+      this.tStart = null
+      this.duration = 150
+      this.endValueCalc = y => y * degreeToRadian(20)
+
+      this.reset = (currX, y) => {
+        this.tStart = Date.now()
+        this.easeFunc = easeFuncFactory({
+          type: 'quadIn', start: currX,
+          end: this.endValueCalc(y),
+          duration: this.duration
+        })
+      }
+
+    })()
   }
 
-  update (xMoveVal = 0) {
-    this.rotation.y += (this.rotationSpeed + this.extraSpeed.currentValue)
+  update ({ x, y }) {
+    if (this.mouseX === null || this.mouseX !== x)
+      this.mouseX = x
+      
+    if (this.mouseY === null || this.mouseY !== y) {
+      this.mouseY = y
+      this.xRotationAni.reset(this.rotation.x, this.mouseY)
+    }
 
+    // y rotation
+    const yRotationSpeed = this.rotationSpeed + Math.abs(this.mouseX) * degreeToRadian(6)
+    this.rotation.y += signOf(this.mouseX) * yRotationSpeed
+    
+    // x rotation
+    const tPassed = Date.now() - this.xRotationAni.tStart
+    
+    if (tPassed <= this.xRotationAni.duration)
+      this.rotation.x = this.xRotationAni.easeFunc(tPassed)
+
+    // particle oscillation
     this.particles.forEach(particle => particle.update())
-    this.extraSpeed.update(xMoveVal)
   }
 }
 
