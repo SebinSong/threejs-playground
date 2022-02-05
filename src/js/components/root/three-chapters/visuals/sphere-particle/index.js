@@ -20,14 +20,14 @@ const colors = {
   wave: '#FFFFFF'
 }
 const mouse = new Vector2(0,0)
-const [SPHERE_RADIUS, PARTICLE_AMOUNT] = [15, 1200]
+const [SPHERE_RADIUS, PARTICLE_AMOUNT] = [15, 1000]
 const cameraSettings = {
   fov: 45, near: 0.1, far: 1000,
   position: new Vector3(0, 0, SPHERE_RADIUS*4.5),
   lookAt: [0,0,0]
 }
 const throttle = new (function () {
-  this.interval = 150
+  this.interval = 50
   this.prev = null
 
   this.reset = () => { this.prev = Date.now() }
@@ -84,23 +84,8 @@ function initThree (canvasEl) {
     // scene.add(axes)
   }
 
-  { // object
-    sphere = new Sphere({
-      color: colors.object,
-      particleRadius: SPHERE_RADIUS / 180,
-      particleAmount: PARTICLE_AMOUNT,
-      sphereRadius: SPHERE_RADIUS,
-      spherePosition: new Vector3(0,0,0),
-      rotationSpeed: degreeToRadian(0.25)
-    })
-
-    waves = new Waves({
-      waveAmount: 5, dotAmount: 8, length: SPHERE_RADIUS * 2 * 0.9
-    })
-
-    scene.add(waves)
-    scene.add(sphere)
-  }
+  // object
+  initObject()
 
   renderScene()
   animate()
@@ -112,6 +97,35 @@ function animate () {
   sphere.update(mouse)
   waves.update()
   renderScene()
+}
+
+function initObject () {
+  const isTabletSize = window.innerWidth <= 1000
+  const isInMobileSize = window.innerWidth <= 600
+
+  const radiusToUse = isInMobileSize ? SPHERE_RADIUS * 0.75 : 
+    isTabletSize ? SPHERE_RADIUS * 0.85 : 
+    SPHERE_RADIUS
+  const particleAmount = isInMobileSize ? Math.ceil(PARTICLE_AMOUNT * 0.5) :
+    isTabletSize ? Math.ceil(PARTICLE_AMOUNT * 0.7) : PARTICLE_AMOUNT
+
+  sphere && sphere.remove()
+  waves && waves.remove()
+
+  sphere = new Sphere({
+    color: colors.object,
+    particleRadius: radiusToUse / 180,
+    particleAmount: particleAmount,
+    sphereRadius: radiusToUse,
+    spherePosition: new Vector3(0,0,0),
+    rotationSpeed: degreeToRadian(0.25)
+  })
+
+  waves = new Waves({
+    waveAmount: 5, dotAmount: 8, length: radiusToUse * 2 * 0.9
+  })
+
+  scene.add(waves, sphere)
 }
 
 function configureRendererAndCamera () {
@@ -132,28 +146,44 @@ function configureRendererAndCamera () {
 
 function onWindowResize () {
   configureRendererAndCamera()
+
+  initObject()
   renderScene()
 }
 
 function setupEventListeners () {
-  window.addEventListener('resize', onWindowResize)
+  const lerpFactory = ([i1, i2], [o1, o2]) => {
+    const [dInput, dOutput] = [i2 - i1, o2 - o1]
 
-  window.addEventListener('mousemove', e => {
-    const { clientX, clientY, movementX } = e
+    return inputVal => {
+      if (inputVal <= i1) return o1
+      else if (inputVal >= i2) return o2
+
+      return o1 + dOutput * (inputVal - i1) / dInput
+    }
+  }
+
+  const onPointerMove = (pointerType, e) => {
+    const lerp = lerpFactory([400, 1200], [0.3, 1])
+    const { clientX, clientY, movementX } = pointerType === 'touch' ? e.touches[0] : e
 
     if (throttle.prev === null || 
       (Date.now() - throttle.prev >= throttle.interval)) {
       throttle.reset()
 
-      mouse.x = clientX / window.innerWidth - 0.5
+      mouse.x = (clientX / window.innerWidth - 0.5) * lerp(window.innerWidth)
       mouse.xVel = movementX || 0
     }
 
-    window.clearTimeout(mouseMoveTimeoutId)
-    mouseMoveTimeoutId = window.setTimeout(() => {
-      mouse.y = clientY / window.innerHeight - 0.5
-    }, 50)
-  })
+    mouse.y = (clientY / window.innerHeight - 0.5)
+  }
+
+  window.addEventListener('resize', onWindowResize)
+
+  if (window.matchMedia('(hover: hover)').matches)
+    window.addEventListener('mousemove', onPointerMove.bind(this, 'mouse'))
+  else
+    window.addEventListener('touchmove', onPointerMove.bind(this, 'touch'))
 }
 
 export {

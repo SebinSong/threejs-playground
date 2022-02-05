@@ -68,7 +68,6 @@ class Sphere extends Group {
     })
     this.position.copy(spherePosition)
 
-
     for (let i=0; i<particleAmount; i++) {
       const dirVector = randomVector3()
       const particle = new Particle({
@@ -84,50 +83,48 @@ class Sphere extends Group {
     }
 
     this.mouseX = this.mouseY = null
-    this.xRotationAni = {
-      tStart: null, duration: 400,
-      endValueCalc: yVal => yVal * degreeToRadian(20)
-    }
+    this.yRotationCalc = y => y * degreeToRadian(14)
+    this.name = 'sphere'
 
-    this.xRotationAni = new (function () {
-      this.tStart = null
-      this.duration = 150
-      this.endValueCalc = y => y * degreeToRadian(20)
+    // this.xRotationAni = new (function () {
+    //   this.tStart = null
+    //   this.duration = 150
+    //   this.endValueCalc = y => y * degreeToRadian(20)
 
-      this.reset = (currX, y) => {
-        this.tStart = Date.now()
-        this.easeFunc = easeFuncFactory({
-          type: 'quadIn', start: currX,
-          end: this.endValueCalc(y),
-          duration: this.duration
-        })
-      }
+    //   this.reset = (currX, y) => {
+    //     this.tStart = Date.now()
+    //     this.easeFunc = easeFuncFactory({
+    //       type: 'quadIn', start: currX,
+    //       end: this.endValueCalc(y),
+    //       duration: this.duration
+    //     })
+    //   }
 
-    })()
+    // })()
   }
 
   update ({ x, y }) {
     if (this.mouseX === null || this.mouseX !== x)
       this.mouseX = x
       
-    if (this.mouseY === null || this.mouseY !== y) {
+    if (this.mouseY === null || this.mouseY !== y)
       this.mouseY = y
-      this.xRotationAni.reset(this.rotation.x, this.mouseY)
-    }
 
     // y rotation
     const yRotationSpeed = this.rotationSpeed + Math.abs(this.mouseX) * degreeToRadian(6)
     this.rotation.y += signOf(this.mouseX) * yRotationSpeed
     
     // x rotation
-    const tPassed = Date.now() - this.xRotationAni.tStart
+    this.rotation.x = this.yRotationCalc(this.mouseY)
     
-    if (tPassed <= this.xRotationAni.duration)
-      this.rotation.x = this.xRotationAni.easeFunc(tPassed)
+    // if (tPassed <= this.xRotationAni.duration)
+    //   this.rotation.x = this.xRotationAni.easeFunc(tPassed)
 
     // particle oscillation
     this.particles.forEach(particle => particle.update())
   }
+
+  remove () { this.parent.remove(this) }
 }
 
 class WaveDot extends Vector3 {
@@ -249,6 +246,8 @@ class Waves extends Group {
   update () {
     this.waves.forEach(wave => wave.update())
   }
+
+  remove () { this.parent.remove(this) }
 }
 
 class ExtraAngleSpeed {
