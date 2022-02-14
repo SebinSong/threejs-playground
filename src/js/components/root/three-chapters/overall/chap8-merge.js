@@ -3,18 +3,19 @@ import { Axes, PlaneXY,
   getGeometryBoundingBox, CombineWithEdge,
   OrbitControls } from './utils.js'
 import { degreeToRadian, randomSign } from '@view-util'
-import { MeshStandardMaterial } from 'three'
 
 const {
   WebGLRenderer, Scene, PerspectiveCamera,
-  Vector3, Color, Group, Mesh,
+  Vector3, Color, Group, Mesh, Object3D,
   BufferGeometry, PlaneGeometry, ConeGeometry,
-  MeshLambertMaterial, MeshBasicMaterial,
-  AmbientLight, DirectionalLight
+  MeshLambertMaterial, MeshStandardMaterial, LineBasicMaterial,
+  CameraHelper,
+  AmbientLight, DirectionalLight, EdgesGeometry,
+  LineSegments
 } = THREE
 
 let renderer, scene, camera, orbitControl
-let ambientLight
+let ambientLight, directionalLight
 let axes, plane, planeDash, cone
 let animationId = null
 
@@ -23,16 +24,18 @@ const [planeWidth, planeHeight] = [80, 80]
 const cameraSettings = {
   fov: 75, near: 0.1, far: 1000,
   position: new Vector3(
-    planeWidth, 80, planeHeight
+    planeWidth * 1.1, 80, planeHeight * 1.1
   ),
   lookAt: [planeWidth * 0.4, 0.1, planeHeight * 0.4]
 }
 const colors = {
   bg: '#FFFFFF',
-  ambientLight: '#FFFFFF',
+  ambientLight: '#DDDDDD',
+  light: '#FFFFFF',
   line: '#6A6A6A',
   plane: '#3C5659',
-  cone: '#F24405'
+  cone: '#F24405',
+  objects: ['#F2059F', '#F2E205', '#F24405', '#418FBF', '#D9ADD2', '#AD24BF', '#F2C063']
 }
 const CONE_AMOUNT = 50
 
@@ -60,8 +63,20 @@ function initThree (canvasEl) {
   // lights
   {
     ambientLight = new AmbientLight(colors.ambientLight)
+    directionalLight = new DirectionalLight(colors.light, 1)
+
+    directionalLight.position.set(-1 * planeWidth/2, 40, planeHeight/2)
+    directionalLight.target = new Object3D()
+    directionalLight.target.position.set(planeWidth/2, 0.1, planeHeight/2)
+    directionalLight.castShadow = true
+
+    directionalLight.shadow.camera.left = -100
+    directionalLight.shadow.camera.right = 100
+    directionalLight.shadow.camera.top = 100
+    directionalLight.shadow.camera.bottom = -100
 
     scene.add(ambientLight)
+    scene.add(directionalLight, directionalLight.target)
   }
 
   // axes & plane
@@ -81,7 +96,7 @@ function initThree (canvasEl) {
 
     plane = new Mesh(
       new PlaneGeometry(planeWidth, planeHeight),
-      new MeshLambertMaterial({ color: colors.plane,
+      new MeshStandardMaterial({ color: colors.plane,
         side: THREE.DoubleSide, transparent: true, opacity: 1 })
     )
     plane.rotation.x = -0.5 * Math.PI
@@ -93,42 +108,39 @@ function initThree (canvasEl) {
 
   // objects
   {
+    const randomFromArr = arr => arr[Math.floor(arr.length * Math.random())]
     const CONE_RADIUS = 6
-    const CONE_GROUP_RADIUS = 40
+    const CONE_GROUP_RADIUS = planeWidth / 2 * 0.85
 
-    const [geometry, material] = [
-      new ConeGeometry(CONE_RADIUS, CONE_RADIUS * 1.2, 4, 1),
-      new MeshBasicMaterial({
-        color: colors.cone, side: THREE.DoubleSide,
-        transparent: true, opacity: 1
-      })
-    ]
     const coneGroup = new Group()
-    const mergeGeometry = new BufferGeometry()
+    const geometry = new ConeGeometry(CONE_RADIUS, CONE_RADIUS * 1.2, 4, 1)
+    const coneLineMaterial = new LineBasicMaterial({ color: '#000000' })
+    const coneLineGeometry = new EdgesGeometry(geometry)
     const { height: coneHeight } = getGeometryBoundingBox(geometry) 
 
     for (let i=0; i<CONE_AMOUNT; i++) {
-      const cone = new Mesh(geometry, material)
+      const material = new MeshStandardMaterial({
+        color: randomFromArr(colors.objects),
+        transparent: true, opacity: 1, side: THREE.DoubleSide
+      })
+      const cone = new Group()
+      const coneSolid = new Mesh(geometry, material)
+      const coneLine = new LineSegments(coneLineGeometry, coneLineMaterial)
+
+      coneSolid.castShadow = true
+      cone.add(coneSolid, coneLine)
+
       cone.rotation.y = Math.PI * 0.25
       cone.position.y += coneHeight / 2
 
       cone.position.x = randomSign() * Math.random() * CONE_GROUP_RADIUS
       cone.position.z = randomSign() * Math.random() * CONE_GROUP_RADIUS
-      cone.updateMatrix()
 
-      mergeGeometry.merge(cone.geometry)
+      coneGroup.add(cone)
     }
 
-    const mergeMesh = new Mesh(
-      mergeGeometry,
-      new MeshStandardMaterial({
-        color: '#000000', transparent: true, opacity: 1,
-        side: THREE.DoubleSide
-      })
-    )
-    
-    scene.add(mergeMesh)
-    // cone.rotation.x = -0.5 * Math.PI
+    coneGroup.position.set(planeWidth/2, 0, planeHeight/2)
+    scene.add(coneGroup)
   }
 
   renderScene()
