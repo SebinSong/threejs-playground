@@ -42,7 +42,7 @@ const colors = {
 function initThree (canvasEl) {
   // renderer & scene
   renderer = new WebGLRenderer({ canvas: canvasEl, antialias: true })
-  scene = new Scene()
+  scene = new Scene() 
 
   renderer.setClearColor(new Color('#000000'))
   renderer.shadowMap.enabled = true;

@@ -35,4 +35,13 @@ body {
     width: 6.4rem;
     height: 6.4rem;
   }
+
+  .invisible-a-tag {
+    position: absolute;
+    top: -20rem;
+    left: -20rem;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
 }

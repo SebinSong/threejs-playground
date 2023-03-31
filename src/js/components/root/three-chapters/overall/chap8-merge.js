@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import { Axes, PlaneXY,
   getGeometryBoundingBox, CombineWithEdge,
   OrbitControls } from './utils.js'
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
+
 import { degreeToRadian, randomSign } from '@view-util'
 
 const {
@@ -11,12 +13,14 @@ const {
   MeshLambertMaterial, MeshStandardMaterial, LineBasicMaterial,
   CameraHelper,
   AmbientLight, DirectionalLight, EdgesGeometry,
-  LineSegments
+  LineSegments,
+  
 } = THREE
 
 let renderer, scene, camera, orbitControl
 let ambientLight, directionalLight
 let axes, plane, planeDash, cone
+let exporter
 let animationId = null
 
 const renderScene = () => renderer.render(scene, camera)
@@ -143,6 +147,25 @@ function initThree (canvasEl) {
     scene.add(coneGroup)
   }
 
+  { // exporter
+    const aTag = document.createElement('a')
+    aTag.classList.add('invisible-a-tag')
+    canvasEl.parentNode.appendChild(aTag)
+
+    exporter = new GLTFExporter()
+
+    exporter.parse(scene,
+      result => {
+        console.log('export result: ', result)
+
+        const outputStr = JSON.stringify(result)
+        saveString(aTag, outputStr, 'example.json')
+      })
+      err => {
+        console.log('export failed: ', err)
+      }
+  }
+
   renderScene()
   animate()
 }
@@ -186,6 +209,19 @@ function setupEventListeners () {
 
 function cleanupThree () {
   window.removeEventListener('resize', onWindowResize)
+}
+
+function saveString (aTag, string, filename) {
+  const blob = new Blob([string], { type: 'application/json' }, filename)
+
+  const url = URL.createObjectURL(blob)
+  aTag.href = url
+  aTag.download = filename
+
+  // aTag.click()
+  // setTimeout(() => {
+  //   URL.revokeObjectURL(url)
+  // }, 1000)
 }
 
 export {
